@@ -1,0 +1,60 @@
+
+Copyright: (c) 2020 - 2021 Seagate Technology LLC and/or its its Affiliates,
+All Rights Reserved
+
+This software is subject to the terms of the Mozilla Public License, v. 2.0.
+If a copy of the MPL was not distributed with this file, You can obtain
+one at http://mozilla.org/MPL/2.0/.
+
+
+1. Build MIO library
+
+Uncompress the source code package.
+
+Run the following steps to build MIO library and examples.
+(1) ./autogen.sh
+(2) ./configure
+    if you install Mero rpms in a customized directory such as your home
+    directory or build Mero from source, run configure like this
+
+    ./configure --with-libmero=libmero_directory --with-mero-headers=mero_headers_directory
+
+(3) make
+
+2. Run MIO examples
+
+MIO source code is shipped with varied examples.
+
+mio_rw_threads starts specified number of READ/WRITE threads. WRITE threads
+create MIO objects and write data to them, and then inform the READ trheads
+to read the written objects. READ threads will verify the data fetched from
+objects.
+
+Run mio_rw_threads following the steps below:
+(1) Start Mero (follow the Mero instruction)
+
+(2) cd tests
+MIO provides a sample configuration file mio_config.yaml in this directory.
+Edit mio_config.yaml to reflect Mero configurations in your system: (a) replace
+the clovis local address, MERO_CLOVIS_INST_ADDR, to yours. (b) replace MERO_HA_ADDR
+with your HA address. (c) MERO_PROFILE and MERO_PROCESS_FID (usually no need to
+change these 2 parameters)
+
+Methods to get the above parameters:
+(a) hctl mero status
+(b) checkout /etc/mero/conf.xc to search strings for M0_CST_HA
+(c) if your system is shipped with clovis sample apps, run
+    clovis-sample-app-dir/scripts/c0appzrcgen 
+
+(3) sudo ../examples/mio_rw_threads -s 4096 -c 1 -n 10 -t 1 -y ./mio_config.yaml -o 1:12346800
+
+Usage of mio_rw_thread
+  -o, --object         FID       Starting object ID
+  -n, --nr_objs        INT       The number of objects
+  -s, --block-size     INT       block size in bytes or with suffix b/k/m/g/K/M/G 
+  -c, --block-count    INT       number of blocks written to an object with suffix b/k/m/g/K/M/G
+  -t, --threads                  Number of threads
+  -y, --mio_conf                 MIO YAML configuration file
+  -h, --help                     shows this help text and exit
+
+All MIO examples use 2 uint64_t to represent an object ID.

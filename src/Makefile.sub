@@ -1,0 +1,16 @@
+# Copyright: (c) 2020 - 2021 Seagate Technology LLC and/or its its Affiliates,
+# All Rights Reserved
+#
+# This software is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+nobase_mio_include_HEADERS += src/mio.h \
+			      src/mio_internal.h \
+			      src/driver_clovis.h \
+			      src/logger.h
+
+lib_libmio_la_SOURCES += src/parser.c src/logger.c \
+			 src/utils.c src/mio.c src/mio_driver.c \
+			 src/hints.c src/driver_clovis.c \
+			 src/driver_clovis_comp_obj.c

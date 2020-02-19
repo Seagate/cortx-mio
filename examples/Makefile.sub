@@ -1,0 +1,50 @@
+# Copyright: (c) 2020 - 2021 Seagate Technology LLC and/or its its Affiliates,
+# All Rights Reserved
+#
+# This software is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+
+examples_mio_cat_SOURCES = examples/mio_cat.c examples/obj.c \
+	  examples/obj_io_poll.c examples/obj_io_cbs.c \
+	  examples/helpers.c
+
+examples_mio_copy_SOURCES = examples/mio_copy.c examples/obj.c \
+	  examples/obj_io_poll.c examples/obj_io_cbs.c \
+	  examples/helpers.c
+
+examples_mio_rw_threads_SOURCES = examples/mio_rw_threads.c \
+	  examples/obj.c examples/obj_io_poll.c \
+	  examples/helpers.c
+
+examples_mio_touch_SOURCES = examples/mio_touch.c examples/obj.c \
+	  examples/helpers.c
+ 
+examples_mio_unlink_SOURCES = examples/mio_unlink.c  examples/obj.c \
+	  examples/helpers.c
+
+examples_mio_hint_set_SOURCES = examples/mio_hint_set.c examples/obj.c \
+	  examples/helpers.c
+
+examples_mio_hint_stat_SOURCES = examples/mio_hint_stat.c examples/obj.c \
+	  examples/helpers.c
+
+examples_mio_comp_obj_example_SOURCES = examples/mio_comp_obj.c examples/obj.c \
+	  examples/helpers.c
+
+examples_mio_kvs_create_set_SOURCES = examples/mio_kvs_create_set.c examples/kvs.c \
+	  examples/helpers.c
+
+examples_mio_kvs_del_set_SOURCES = examples/mio_kvs_del_set.c examples/kvs.c \
+	  examples/helpers.c
+
+examples_mio_kvs_insert_SOURCES = examples/mio_kvs_insert.c examples/kvs.c \
+	  examples/helpers.c
+
+examples_mio_kvs_retrieve_SOURCES = examples/mio_kvs_retrieve.c  examples/kvs.c \
+	  examples/helpers.c
+
+examples_mio_kvs_del_pairs_SOURCES = examples/mio_kvs_del_pairs.c  examples/kvs.c \
+	  examples/helpers.c 
+
