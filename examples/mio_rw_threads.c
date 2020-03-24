@@ -37,6 +37,7 @@ struct rwt_obj_todo_list {
 	int otl_nr_in_list;
 	int otl_nr_todo;
 	int otl_nr_done;
+	int otl_nr_failed;
 	int otl_nr_matched;
 	struct rwt_obj_todo otl_head;
 };
@@ -50,6 +51,8 @@ enum {
 
 static pthread_t **read_threads = NULL;
 static pthread_t **write_threads = NULL;
+static int *read_tids = NULL;
+static int *write_tids = NULL;
 
 /**
  * rwt - Read Write Threads
@@ -276,22 +279,27 @@ static void* rwt_writer(void *in)
 		pthread_mutex_unlock(&obj_to_write_list.otl_mutex);
 
 		rc = rwt_obj_write(todo);
-		if (rc < 0) {
-			fprintf(stderr, "Failed to write to object! \n");
-			break;
-		}
 
 		/* WRITE complete, add to the READ todo list. */
 		pthread_mutex_lock(&obj_to_read_list.otl_mutex);
-		todo->ot_next = obj_to_read_list.otl_head.ot_next;
-		obj_to_read_list.otl_head.ot_next = todo;
-		obj_to_read_list.otl_nr_in_list++;
-		pthread_cond_signal(&obj_to_read_list.otl_cond);
+		if (rc == 0) {
+			todo->ot_next = obj_to_read_list.otl_head.ot_next;
+			obj_to_read_list.otl_head.ot_next = todo;
+			obj_to_read_list.otl_nr_in_list++;
+		} else if (rc < 0) {
+			fprintf(stderr, "Failed to write to object! \n");
+			obj_to_read_list.otl_nr_failed++;
+		}
+		pthread_cond_broadcast(&obj_to_read_list.otl_cond);
 		pthread_mutex_unlock(&obj_to_read_list.otl_mutex);
 	}
 
 	mio_thread_fini(&thread);
 	
+	pthread_mutex_lock(&obj_to_read_list.otl_mutex);
+	pthread_cond_broadcast(&obj_to_read_list.otl_cond);
+	pthread_mutex_unlock(&obj_to_read_list.otl_mutex);
+
 	return NULL;
 }
 
@@ -301,18 +309,31 @@ static void* rwt_reader(void *in)
 	bool matched = false;
 	struct rwt_obj_todo *todo;	
 	struct mio_thread thread;
+	int tid = *((int *)in);
+	bool read_all_done = false;
 
 	mio_thread_init(&thread);
 
-	fprintf(stderr, "%10s\t%32s\t%32s\n",
-		"Object ID", "WRITE MD5", "READ MD5");
+	if (tid == 1)
+		fprintf(stderr, "%10s\t%32s\t%32s\n",
+			"Object ID", "WRITE MD5", "READ MD5");
 
 	/* main loop */
 	while(1) {
 		pthread_mutex_lock(&obj_to_read_list.otl_mutex);
-		while (obj_to_read_list.otl_nr_in_list == 0)
+		while (obj_to_read_list.otl_nr_in_list == 0) {
+			if ((obj_to_read_list.otl_nr_done + 
+			     obj_to_read_list.otl_nr_failed) ==
+			    obj_to_read_list.otl_nr_todo) {
+				read_all_done = true;
+				pthread_mutex_unlock(
+					&obj_to_read_list.otl_mutex);
+				goto exit;
+			}
+
 			pthread_cond_wait(&obj_to_read_list.otl_cond,
 					  &obj_to_read_list.otl_mutex);
+		}
 		todo = obj_to_read_list.otl_head.ot_next;
 		obj_to_read_list.otl_head.ot_next = todo->ot_next;
 		todo->ot_next = NULL;
@@ -320,30 +341,37 @@ static void* rwt_reader(void *in)
 		pthread_mutex_unlock(&obj_to_read_list.otl_mutex);
 
 		rc = rwt_obj_read(todo);
-		if (rc < 0) {
-			fprintf(stderr, "Failed to write to object! \n");
-			break;
-		}
-
-		matched = rwt_obj_verify_md5sums(todo);
 
 		pthread_mutex_lock(&obj_to_read_list.otl_mutex);
-		if (matched)
-			obj_to_read_list.otl_nr_matched++;
-		obj_to_read_list.otl_nr_done++;
-		if (obj_to_read_list.otl_nr_done ==
-		    obj_to_read_list.otl_nr_todo) {
-			pthread_mutex_unlock(&obj_to_read_list.otl_mutex);
-			break;
+		if (rc < 0) {
+			fprintf(stderr, "Failed to write to object! \n");
+			obj_to_read_list.otl_nr_failed++;
+		} else {
+			matched = rwt_obj_verify_md5sums(todo);
+			if (matched)
+				obj_to_read_list.otl_nr_matched++;
+			obj_to_read_list.otl_nr_done++;
+			if ((obj_to_read_list.otl_nr_done +
+			     obj_to_read_list.otl_nr_failed) ==
+		    	    obj_to_read_list.otl_nr_todo)
+				read_all_done = true;	
 		}
 		pthread_mutex_unlock(&obj_to_read_list.otl_mutex);
 
 		obj_rm(&todo->ot_oid);
 		free(todo);
+
+exit:
+		if (read_all_done)
+			break;
 	}
 
 	mio_thread_fini(&thread);
 	
+	pthread_mutex_lock(&obj_to_read_list.otl_mutex);
+	pthread_cond_broadcast(&obj_to_read_list.otl_cond);
+	pthread_mutex_unlock(&obj_to_read_list.otl_mutex);
+
 	return NULL;
 }
 
@@ -439,8 +467,9 @@ static void rwt_report()
 {
 	fprintf(stderr, "[Final Report] \t");
 	fprintf(stderr, "Objects TODO: %d\t", obj_to_read_list.otl_nr_todo);
-	fprintf(stderr, "Objects Completed: %d\t", obj_to_read_list.otl_nr_done);
-	fprintf(stderr, "Objects Matched: %d\t", obj_to_read_list.otl_nr_matched);
+	fprintf(stderr, "Completed: %d\t", obj_to_read_list.otl_nr_done);
+	fprintf(stderr, "Failed: %d\t", obj_to_read_list.otl_nr_failed);
+	fprintf(stderr, "Matched: %d\t", obj_to_read_list.otl_nr_matched);
 	fprintf(stderr, "\n");
 }
 
@@ -459,19 +488,26 @@ mio_rwt_start(int nr_threads, struct mio_obj_id *st_oid, int nr_objs,
 	 */
 	read_threads = malloc(nr_threads * sizeof(*read_threads));
 	write_threads = malloc(nr_threads * sizeof(*write_threads));
-	if (read_threads == NULL || write_threads == NULL) {
+	read_tids = malloc(nr_threads * sizeof(*read_tids));
+	write_tids = malloc(nr_threads * sizeof(*write_tids));
+	if (read_threads == NULL || write_threads == NULL || 
+	    read_tids == NULL || write_tids == NULL) {
 		rc = -ENOMEM;
 		goto error;
 	}
 
 	for (i = 0; i < nr_threads; i++) {
-		rc = rwt_thread_init(write_threads + i, &rwt_writer, NULL);
+		write_tids[i] = i;
+		rc = rwt_thread_init(
+			write_threads + i, &rwt_writer, write_tids + i);
 		if (rc < 0)
 			goto error;
 	}
 
 	for (i = 0; i < nr_threads; i++) {
-		rc = rwt_thread_init(read_threads + i, &rwt_reader, NULL);
+		read_tids[i] = i;
+		rc = rwt_thread_init(
+			read_threads + i, &rwt_reader, read_tids + i);
 		if (rc < 0)
 			goto error;
 	}
@@ -483,6 +519,10 @@ error:
 		free(read_threads);
 	if (write_threads)
 		free(write_threads);
+	if (read_tids)
+		free(read_tids);
+	if (write_tids)
+		free(write_tids);
 	return rc;
 }
 
@@ -510,6 +550,8 @@ static void mio_rwt_stop(int nr_threads)
 	}
 	free(read_threads);
 	free(write_threads);
+	free(read_tids);
+	free(write_tids);
 
 	rwt_report();	
 
