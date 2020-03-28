@@ -195,6 +195,7 @@ static void mio_clovis_fini()
 	m0_clovis_idx_fini(
 		(struct m0_clovis_idx *)mio_obj_attrs_kvs.mk_drv_kvs);
 	m0_clovis_fini(mio_clovis_instance, true);
+	mio_clovis_instance = NULL;
 }
 
 static int mio_clovis_thread_init(struct mio_thread *thread)
