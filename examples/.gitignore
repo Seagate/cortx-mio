@@ -1,0 +1,15 @@
+/mio_cat
+/mio_comp_obj_example
+/mio_copy
+/mio_hint_set
+/mio_hint_stat
+/mio_kvs_create_set
+/mio_kvs_del_pairs
+/mio_kvs_del_set
+/mio_kvs_insert
+/mio_kvs_retrieve
+/mio_rw_threads
+/mio_touch
+/mio_unlink
+/m0trace.*
+
