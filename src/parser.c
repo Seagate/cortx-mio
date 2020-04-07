@@ -233,6 +233,7 @@ static void conf_free_drivers()
 		mio_mem_free(mero_conf->mc_process_fid);
 		mio_mem_free(mero_conf->mc_profile);
 		free(mero_conf);
+		mero_conf = NULL;
 		mio_driver_confs[MIO_MERO] = NULL;
 	}
 }
