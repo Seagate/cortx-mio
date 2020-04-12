@@ -22,10 +22,11 @@ static void cat_usage(FILE *file, char *prog_name)
 "Mandatory arguments to long options are mandatory for short options too.\n"
 "  -o, --object         OID       ID of the mero object\n"
 "  -s, --block-size     INT       block size in bytes or with " \
-				 "suffix b/k/m/g/K/M/G (see --block-count)\n"
+				 "suffix b/k/m/g/K/M/G\n"
 "  -c, --block-count    INT       number of blocks for IO, can give with " \
-				 "suffix b/k/m/g/K/M/G (see --block-size)\n"
+				 "suffix b/k/m/g/K/M/G\n"
 "  -a, --async_mode               Set to async IO mode\n"
+"  -p, --print_on_console         print content on console\n"
 "  -y, --mio_conf_file            MIO YAML configuration file\n"
 "  -h, --help                     shows this help text and exit\n"
 , prog_name);
@@ -40,7 +41,14 @@ int main(int argc, char **argv)
 	mio_cmd_obj_args_init(argc, argv, &cat_params, &cat_usage);
 	if (argv[optind] != NULL)
 		dst_fname = strdup(argv[optind]);
-	if (cat_params.cop_async_mode && dst_fname == NULL) {
+
+	/*
+	 * For async mode, output file has to be provided as the object's
+	 * content is read from object and printed on console out of order.
+	 */
+	if ((cat_params.cop_async_mode == true && dst_fname == NULL) ||
+	    (cat_params.cop_async_mode == false &&
+             print_on_console == false && dst_fname == NULL)) {
 		fprintf(stderr, "Missed source file to write to !\n");
 		cat_usage(stderr, basename(argv[0]));
 		exit(-1);

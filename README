@@ -63,3 +63,8 @@ Usage of mio_rw_thread
   -h, --help                     shows this help text and exit
 
 All MIO examples use 2 uint64_t to represent an object ID.
+
+(4) MIO also provides with test scripts to test basic functionalities.
+    Run the scripts as root or users of Mero group as above.
+
+sudo ./mio_run_tests.sh

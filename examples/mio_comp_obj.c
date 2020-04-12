@@ -253,6 +253,13 @@ static int comp_obj_del_layers(struct mio_obj *obj, int nr_layers)
 	     mio_cmd_wait_on_op(&op);
 	mio_op_fini(&op);
 
+	/* Delete objects for each layer. */
+	for (i = 0; i < nr_layers; i++) {
+		rc = mio_cmd_obj_unlink(layer_ids + i);
+		if (rc < 0)
+			break;
+	}
+
 	free(layer_ids);
 	return rc;
 }
@@ -371,7 +378,7 @@ int main(int argc, char **argv)
 		fprintf(stderr, "success!\n");
 
 	fprintf(stderr, "6. Del layers ...");
-	rc = comp_obj_del_layers(&obj, 1);
+	rc = comp_obj_del_layers(&obj, 3);
 	if (rc < 0) {
 		fprintf(stderr, "failed!\n");
 		goto exit;
@@ -380,9 +387,10 @@ int main(int argc, char **argv)
 
 	mio_obj_close(&obj);
 
+	mio_cmd_obj_unlink(&comp_obj_params.cop_oid);
 exit:
-	if (rc != 0)
-		mio_cmd_error("", rc);
+	if (rc < 0)
+		mio_cmd_error("mio_comp_obj example", rc);
 	mio_fini();
 	mio_cmd_obj_args_fini(&comp_obj_params);
 	return rc;

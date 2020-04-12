@@ -22,9 +22,9 @@ static void copy_usage(FILE *file, char *prog_name)
 "Mandatory arguments to long options are mandatory for short options too.\n"
 "  -o, --object         OID       ID of the mero object\n"
 "  -s, --block-size     INT       block size in bytes or with " \
-				 "suffix b/k/m/g/K/M/G (see --block-count)\n"
+				 "suffix b/k/m/g/K/M/G\n"
 "  -c, --block-count    INT       number of blocks to copy, can give with " \
-				 "suffix b/k/m/g/K/M/G (see --block-size)\n"
+				 "suffix b/k/m/g/K/M/G\n"
 "  -a, --async_mode               Set to async IO mode\n"
 "  -y, --mio_conf_file            MIO YAML configuration file\n"
 "  -h, --help                     shows this help text and exit\n"

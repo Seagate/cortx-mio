@@ -175,12 +175,13 @@ int mio_cmd_obj_read(struct mio_obj_id *oid, char *dest,
 		}
 
 		/* Copy data to the file. */
-		rc = obj_write_data_to_file(fp, true, bcount, data);
+		rc = obj_write_data_to_file(fp, bcount, data);
 		if (rc != bcount) {
 			fprintf(stderr, "Writing to file failed!\n");
 			obj_cleanup_iovecs(data);
 			break;
 		}
+		rc = 0;
 
 		obj_cleanup_iovecs(data);
 		block_count -= bcount;
