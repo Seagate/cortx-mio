@@ -5,6 +5,8 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+nobase_mio_include_HEADERS += examples/obj.h \
+			      examples/kvs.h examples/helpers.h
 
 examples_mio_cat_SOURCES = examples/mio_cat.c examples/obj.c \
 	  examples/obj_io_poll.c examples/obj_io_cbs.c \
