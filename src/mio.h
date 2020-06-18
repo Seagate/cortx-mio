@@ -615,6 +615,89 @@ extern struct mio *mio_instance;
 int mio_init(const char *yaml_conf);
 
 /**
+ * Descriptor of a MIO memory layer.
+ */
+struct mio_layer {
+        /** the name by which this layer is referenced by the user */
+        char *name;
+
+        /** This structure can be chained */
+        struct mio_layer *next;
+
+        /* @sining: If you want add an opaque internal identifier like
+         * mio_layer_id id;
+         */
+
+        /* Characteristics of the layer */
+        /** Capacity of the layer (not necessarily constant or current) */
+        size_t capacity;
+
+        /* Note that the 'available space' is not a slot here, because that
+         * would imply that MIO needs to update it frequently. Instead, the free
+         * space should be something that can be inquired by passing the layer
+         * (name, id, or this structure's pointer ?) to a separate
+         * mio_layer_freespace() function */
+
+        /** preferred data alignment */
+        size_t pref_alignment;
+
+        /* Preferred block sizes */
+        /** Number of preferred block size entries */
+        size_t num_pref_block_sizes;
+
+        /** Preferred block sizes for read and write operations, ordered in
+         * decreasing order of performance */
+        size_t pref_block_sizes[];
+};
+
+/**
+ * MIO configuration information structure.
+ */
+struct mio_configinfo {
+        /** The instance name */
+        char *name;
+
+        /** @sining: consider adding an opaque internal identifier like
+         * mio_instance_id id
+         */
+
+        /** The number of memory layers supported */
+        size_t num_layers;
+
+        /** The layer identifiers; roughly ordered by performance */
+        struct mio_layer *layers;
+};
+
+/**
+ * Return the available space in layer @arg layer.
+ *
+ * Returns a (reasonable approximation to) the free capacity of the given layer in @arg *freespace.
+ *
+ */
+int mio_layer_freespace(const struct mio_later *layer,
+                        size_t *freespace);
+
+/**
+ * Return information about the current Maestro IO instance
+ *
+ * This function can only be called after mio_init() returned successfully.
+ *
+ * The return value is an internal object reference to the MIO instance, and will remain valid until the mio_fini() call.
+ *
+ * User code is not permitted to modify the content of the @arg config result.
+ *
+ * @arg *config_p will not be NULL on a successful return. If no memory layers
+ * are configured, this will be visible inside the configinfo structure itself.
+ *
+ * @arg config_p may not be NULL on call.
+ *
+ * @param[out] config_p A linked list of configuration entries
+ * @return 0 for success
+ */
+int mio_configinfo_get(const struct mio_configinfo **config_p);
+
+
+/**
  * Finalises Maestro IO interface. 
  */
 void mio_fini();
