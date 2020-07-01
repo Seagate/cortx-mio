@@ -221,7 +221,6 @@ AC_C_INLINE
 #                        Check required library functions                      #
 #------------------------------------------------------------------------------#
 
-AC_FUNC_MALLOC
 AC_CHECK_FUNCS([gettimeofday memset strchr strdup strstr strtoull])
 
 # Check libyaml 
@@ -229,6 +228,15 @@ AC_SEARCH_LIBS([yaml_parser_initialize], [yaml], [],
                  [yaml_parser_initialize cannot be found! Try install yaml package])
 AC_CHECK_HEADERS([yaml.h], [],
                  AC_MSG_ERROR([yaml.h is not found. Try to install libyaml-devel package]))
+
+# Check for openssl (used by MIO examples)
+AC_CHECK_LIB(crypto, CRYPTO_new_ex_data, [], [AC_MSG_ERROR([library 'crypto' is required for OpenSSL])])
+FOUND_SSL_LIB="no"
+AC_CHECK_LIB(ssl, OPENSSL_init_ssl, [FOUND_SSL_LIB="yes"])
+AC_CHECK_LIB(ssl, SSL_library_init, [FOUND_SSL_LIB="yes"])
+AS_IF([test "x$FOUND_SSL_LIB" = xno], [AC_MSG_ERROR([library 'ssl' is required for OpenSSL])])
+AC_CHECK_HEADERS([openssl/md5.h], [],
+                 AC_MSG_ERROR([md5.h is not found. Try to install openssl-devel package]))
 
 # Check libmero
 #AC_SEARCH_LIBS([m0_clovis_init], [mero], [],
@@ -255,7 +263,7 @@ AS_IF([test x$enable_debug = xyes],
 #------------------------------------------------------------------------------#
 
 MIO_CPPFLAGS="-D_REENTRANT -D_GNU_SOURCE -DM0_INTERNAL='' -DM0_EXTERN=extern \
-             -iquote'$ABS_BUILDDIR' -iquote'$SRCDIR' -include'config.h' \
+             -iquote'$ABS_BUILDDIR' -iquote'$ABS_SRCDIR' -include'config.h' \
              -I$MERO_HEADERS $MIO_CPPFLAGS"
 
 MIO_CPPFLAGS_DIST=$(echo "$MIO_CPPFLAGS" | grep -Po -e '-D\S+|-I/usr\S+' | xargs echo)
