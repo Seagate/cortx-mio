@@ -37,6 +37,8 @@ AM_CPPFLAGS  = @MIO_CPPFLAGS@
 AM_CFLAGS    = @MIO_CFLAGS@
 AM_LDFLAGS   = @MIO_LDFLAGS@
 
+AM_DISTCHECK_CONFIGURE_FLAGS = --with-libmero=@LIBMERO@ --with-mero-headers=@MERO_HEADERS@
+
 #-------------------------------------------------------------------------------
 #                               Global variables                               #
 #-------------------------------------------------------------------------------
@@ -55,7 +57,7 @@ noinst_LTLIBRARIES =
 man_MANS   =
 
 # Extra files with distribution
-EXTRA_DIST =
+EXTRA_DIST = autogen.sh
 
 # Files to clean
 CLEANFILES =
@@ -81,8 +83,9 @@ include $(top_srcdir)/src/Makefile.sub
 
 
 #-------------------------------------------------------------------------------
-#                                 Unit Tests                                   #
+#                                 Tests                                        #
 #-------------------------------------------------------------------------------
+include $(top_srcdir)/tests/Makefile.sub
 
 
 #-------------------------------------------------------------------------------
