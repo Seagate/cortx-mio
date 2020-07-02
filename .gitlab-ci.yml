@@ -1,0 +1,23 @@
+## MIO CI instructions, currently targeted to JSC gitlab server
+
+build:mio:
+  tags: # these are the three tags identifying the group runner on JSC/sage prototype
+    - Group
+    - Maestro
+    - gitlab
+  script:
+    - git checkout -B "$CI_COMMIT_REF_NAME" "$CI_COMMIT_SHA"
+    - autoreconf -ivf
+    - ./configure 
+    - find . -type d | xargs chmod o+rwx
+    # TMPDIR is not set in docker images
+    # HOMEDIR is sometimes set to /nonexistent
+    - timeout -s KILL 20m make check
+    - timeout -s KILL 20m make distcheck
+  artifacts:
+    when: always
+    paths:
+      - config.status
+      - config.log
+      - tests/*.log
+      - mio-*.tar.gz
