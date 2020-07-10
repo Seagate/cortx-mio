@@ -27,6 +27,8 @@ void *mio_mem_alloc(size_t size)
 
 void mio_mem_free(void *p)
 {
+	if (p == NULL)
+		return;
 	free(p);
 }
 

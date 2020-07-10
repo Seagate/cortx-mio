@@ -68,7 +68,7 @@ struct conf_entry {
  * support Mero driver and has limited configurations. But this will become
  * a problem when more drivers are implemented. A better solution is to
  * seperate the big table into driver specific ones and to define driver's
- * configuration operations to parse its entries. 
+ * configuration operations to parse its entries.
  *
  * TODO: driver specific configuration table and operations.
  */
@@ -171,7 +171,7 @@ static enum mio_driver_id conf_get_driver_id(const char *str)
 	if (!strcmp(str, "MERO"))
 		drv_id = MIO_MERO;
 
-	return drv_id;	
+	return drv_id;
 }
 
 static enum mio_log_level conf_get_log_level(const char *str)
@@ -268,7 +268,7 @@ static int conf_extract_value(enum conf_key key, char *value)
 	/* Extract configuration value. */
 	switch(key) {
 	case MIO_DRIVER:
-		mio_inst_drv_id = conf_get_driver_id(value); 
+		mio_inst_drv_id = conf_get_driver_id(value);
 		if (mio_inst_drv_id == MIO_DRIVER_INVALID)
 			rc = -EINVAL;
 		break;
@@ -366,7 +366,7 @@ int mio_conf_init(const char *config_file)
 			else
 				rc = conf_extract_value(key, scalar_value);
 			break;
-		case YAML_STREAM_END_TOKEN:				
+		case YAML_STREAM_END_TOKEN:
 			eof = true;
 			break;
 		default:
@@ -383,7 +383,7 @@ int mio_conf_init(const char *config_file)
 		goto exit;
 	}
 
-	/* Set driver properly. */	
+	/* Set driver properly. */
 	mio_instance->m_driver_id = mio_inst_drv_id;
 	mio_instance->m_driver = mio_driver_get(mio_inst_drv_id);
 	mio_instance->m_driver_confs = mio_driver_confs[mio_inst_drv_id];

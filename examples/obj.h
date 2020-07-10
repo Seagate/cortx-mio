@@ -23,7 +23,7 @@
 #include "src/mio.h"
 
 enum {
-	MIO_CMD_MAX_BLOCK_COUNT = 100
+	MIO_CMD_MAX_BLOCK_COUNT_PER_OP = 120
 };
 
 struct mio_cmd_obj_params {
@@ -63,7 +63,7 @@ void mio_cmd_obj_close(struct mio_obj *obj);
 
 /** Helper functions. */
 int obj_alloc_iovecs(struct mio_iovec **data, uint32_t bcount,
-		     uint32_t bsize, uint64_t offset);
+		     uint32_t bsize, uint64_t offset, uint64_t max_offset);
 void obj_cleanup_iovecs(struct mio_iovec *data);
 int obj_read_data_from_file(FILE *fp, uint32_t bcount, uint32_t bsize,
 			    struct mio_iovec *data);

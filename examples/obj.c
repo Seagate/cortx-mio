@@ -18,7 +18,7 @@
 #include "helpers.h"
 
 int obj_alloc_iovecs(struct mio_iovec **data, uint32_t bcount,
-		     uint32_t bsize, uint64_t offset)
+		     uint32_t bsize, uint64_t offset, uint64_t max_offset)
 {
 	int i;
 	int rc;
@@ -35,8 +35,11 @@ int obj_alloc_iovecs(struct mio_iovec **data, uint32_t bcount,
 
 	for(i = 0; i < bcount; i++) {
 		iovecs[i].miov_base = base + i * bsize;
-		iovecs[i].miov_off = offset + i * bsize; 
-		iovecs[i].miov_len = bsize;
+		iovecs[i].miov_off = offset + i * bsize;
+		if (iovecs[i].miov_off + bsize > max_offset)
+			iovecs[i].miov_len = max_offset - iovecs[i].miov_off;
+		else
+			iovecs[i].miov_len = bsize;
 	}
 	*data = iovecs;
 	return 0;
@@ -60,7 +63,7 @@ int obj_read_data_from_file(FILE *fp, uint32_t bcount, uint32_t bsize,
 	int rc;
 
 	for (i = 0; i < bcount; i++) {
-		rc = fread(data[i].miov_base, bsize, 1, fp);
+		rc = fread(data[i].miov_base, data[i].miov_len, 1, fp);
 		if (rc != 1)
 			break;
 	}
@@ -79,7 +82,7 @@ int obj_write_data_to_file(FILE *fp, bool console,
 		for(i = 0; i < bcount; i++) {
 			rc = fwrite(data[i].miov_base, data[i].miov_len, 1, fp);
 			if (rc != 1) {
-				fprintf(stderr, "Writing to object failed!\n");
+				fprintf(stderr, "Writing to output file failed!\n");
 				break;
 			}
 		}
@@ -228,6 +231,8 @@ int mio_cmd_obj_args_init(int argc, char **argv,
 
 	memset(params, 0, sizeof *params);
 	params->cop_nr_objs = 1;
+	params->cop_block_size = 4096;
+	params->cop_block_count = ~0ULL;
 	params->cop_async_mode = false;
 
 	while ((v = getopt_long(argc, argv, ":o:s:c:n:y:t:ah", l_opts,
@@ -237,7 +242,7 @@ int mio_cmd_obj_args_init(int argc, char **argv,
 		case 'o':
 			obj_id_sscanf(optarg, &params->cop_oid);
 			continue;
-			
+
 		case 's':
 			rc = mio_cmd_strtou64(optarg, &params->cop_block_size);
 			if (rc < 0)

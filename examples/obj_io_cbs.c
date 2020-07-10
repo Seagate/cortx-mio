@@ -11,6 +11,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <sys/stat.h>
 #include <asm/byteorder.h>
 #include <pthread.h>
 
@@ -121,7 +122,7 @@ void obj_read_cb(struct mio_op *op)
 	}
 	obj_write_data_to_file(
 		args->ica_fp, false, args->ica_bcount, args->ica_iovecs);
-	
+
 	obj_cleanup_iovecs(args->ica_iovecs);
 	free(args);
 
@@ -133,7 +134,7 @@ void obj_read_cb(struct mio_op *op)
 
 
 static int
-obj_read_async(struct mio_obj *obj, FILE *write_to_fp, 
+obj_read_async(struct mio_obj *obj, FILE *write_to_fp,
 	       int op_idx, uint32_t bcount, struct mio_iovec *data)
 {
 	int rc;
@@ -166,8 +167,8 @@ obj_read_async(struct mio_obj *obj, FILE *write_to_fp,
 static int obj_io_async_init(int bcount)
 {
 	obj_io_nr_ops_todo =
-		(bcount + MIO_CMD_MAX_BLOCK_COUNT - 1) /
-		 MIO_CMD_MAX_BLOCK_COUNT; 
+		(bcount + MIO_CMD_MAX_BLOCK_COUNT_PER_OP - 1) /
+		 MIO_CMD_MAX_BLOCK_COUNT_PER_OP;
 	obj_io_ops = malloc(obj_io_nr_ops_todo * sizeof(struct mio_op *));
 	if (obj_io_ops == NULL)
 		return -ENOMEM;
@@ -191,7 +192,7 @@ static void obj_io_async_fini()
 			mio_op_fini(obj_io_ops[i]);
 			free(obj_io_ops[i]);
 		}
-	}	
+	}
 
 	free(obj_io_ops);
 }
@@ -202,13 +203,24 @@ int mio_cmd_obj_write_async(char *src, struct mio_obj_id *oid,
 	int rc = 0;
 	uint32_t bcount;
 	uint64_t last_index;
+	uint64_t max_index;
+	uint64_t max_block_count;
 	struct mio_iovec *data;
 	struct mio_obj obj;
 	FILE *fp;
+	struct stat src_stat;
 
 	fp = fopen(src, "r");
 	if (fp == NULL)
 		return -errno;
+
+	rc = fstat(fileno(fp), &src_stat);
+	if (rc < 0)
+		goto src_close;
+	max_index = src_stat.st_size;
+	max_block_count = (max_index - 1) / block_size + 1;
+	block_count = block_count > max_block_count?
+		      max_block_count : block_count;
 
 	memset(&obj, 0, sizeof obj);
 	rc = obj_create(oid, &obj);
@@ -222,9 +234,10 @@ int mio_cmd_obj_write_async(char *src, struct mio_obj_id *oid,
 	pthread_mutex_lock(&obj_io_mutex);
 	last_index = 0;
 	while (block_count > 0) {
-		bcount = (block_count > MIO_CMD_MAX_BLOCK_COUNT)?
-			  MIO_CMD_MAX_BLOCK_COUNT:block_count;
-		rc = obj_alloc_iovecs(&data, bcount, block_size, last_index);
+		bcount = (block_count > MIO_CMD_MAX_BLOCK_COUNT_PER_OP)?
+			  MIO_CMD_MAX_BLOCK_COUNT_PER_OP:block_count;
+		rc = obj_alloc_iovecs(&data, bcount, block_size,
+				      last_index, max_index);
 		if (rc != 0)
 			break;
 
@@ -267,6 +280,8 @@ int mio_cmd_obj_read_async(struct mio_obj_id *oid, char *dest,
 	int rc = 0;
 	uint32_t bcount;
 	uint64_t last_index;
+	uint64_t max_index;
+	uint64_t max_block_count;
 	struct mio_iovec *data;
 	struct mio_obj obj;
 	FILE *fp = NULL;
@@ -287,6 +302,10 @@ int mio_cmd_obj_read_async(struct mio_obj_id *oid, char *dest,
 	rc = obj_open(oid, &obj);
 	if (rc < 0)
 		goto dest_close;
+	max_index = obj.mo_attrs.moa_size;
+	max_block_count = (max_index - 1) / block_size + 1;
+	block_count = block_count > max_block_count?
+		      max_block_count : block_count;
 
 	rc = obj_io_async_init(block_count);
 	if (rc < 0)
@@ -295,10 +314,10 @@ int mio_cmd_obj_read_async(struct mio_obj_id *oid, char *dest,
 	pthread_mutex_lock(&obj_io_mutex);
 	last_index = 0;
 	while (block_count > 0) {
-		bcount = (block_count > MIO_CMD_MAX_BLOCK_COUNT)?
-			  MIO_CMD_MAX_BLOCK_COUNT:block_count;
-		rc = obj_alloc_iovecs(&data, bcount,
-					      block_size, last_index);
+		bcount = (block_count > MIO_CMD_MAX_BLOCK_COUNT_PER_OP)?
+			  MIO_CMD_MAX_BLOCK_COUNT_PER_OP : block_count;
+		rc = obj_alloc_iovecs(&data, bcount, block_size,
+				      last_index, max_index);
 		if (rc != 0)
 			break;
 
@@ -319,7 +338,7 @@ int mio_cmd_obj_read_async(struct mio_obj_id *oid, char *dest,
 	pthread_mutex_unlock(&obj_io_mutex);
 
 	obj_wait_on_all_ops();
-	
+
 	obj_io_async_fini();
 
 obj_close:

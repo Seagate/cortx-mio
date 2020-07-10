@@ -32,6 +32,8 @@ struct mio_obj_ext;
 struct mio_comp_obj_layer;
 struct mio_comp_obj_layout;
 
+struct mio_driver_op;
+
 /**
  * MIO defines sets of operations a driver must implemnt:
  *   - mio_op_ops defines driver specific functions on operation,
@@ -100,7 +102,7 @@ struct mio_kvs_ops {
 
 	int (*mko_del)(struct mio_kvs_id *kvs_id,
 		       int nr_kvps, struct mio_kv_pair *kvps,
-		       int32_t *rcs, struct mio_op *op); 
+		       int32_t *rcs, struct mio_op *op);
 
 	int (*mko_create_set)(struct mio_kvs_id *kvs_id, struct mio_op *op);
 	int (*mko_del_set)(struct mio_kvs_id *kvs_id, struct mio_op *op);
@@ -170,7 +172,7 @@ struct mio_driver_sys_ops {
  * Each Maestro IO driver is defined by a set of operations. Driver
  * initialisaton/finalisation and object and key-value set accessing operations
  * must be implemented for a driver, while mero-inspired operations
- * are optional. 
+ * are optional.
  */
 struct mio_driver {
 	/** Driver's operations, such as initialisation and finalisation. */
@@ -225,6 +227,7 @@ enum {
 };
 
 typedef int (*mio_driver_op_postprocess)(struct mio_op *op);
+typedef int (*mio_driver_op_fini)(struct mio_driver_op *dop);
 struct mio_driver_op {
 	/**
 	 * The function and data for post-processing.
@@ -234,6 +237,8 @@ struct mio_driver_op {
 
 	/** Pointers to driver specific op. */
 	void *mdo_op;
+	void *mdo_op_args;
+	mio_driver_op_fini mdo_op_fini;
 
 	struct mio_driver_op *mdo_next;
 };
@@ -242,8 +247,12 @@ struct mio_driver_op_chain {
 	struct mio_driver_op *mdoc_head;
 };
 
-int mio_driver_op_add(struct mio_op *op, mio_driver_op_postprocess post_proc,
-		      void *post_proc_data, void *drv_op);
+int mio_driver_op_add(struct mio_op *op,
+		      mio_driver_op_postprocess post_proc,
+		      void *post_proc_data,
+		      mio_driver_op_fini op_fini,
+		      void *drv_op,void *drv_op_args);
+
 void mio_driver_op_invoke_real_cb(struct mio_op *op, int rc);
 
 struct mio_driver* mio_driver_get(enum mio_driver_id driver_id);
@@ -311,7 +320,7 @@ struct mio_mero_config {
  * A simple map implementation for hints in which key is of type `int`
  * and value is of type `uint64_t`. As there are usually small number
  * of hints for each object, arrays are used to store keys and values.
- * The overhead of looking up entries in arrays is low. 
+ * The overhead of looking up entries in arrays is low.
  */
 struct mio_hint_map {
 	int mhm_nr_entries;

@@ -29,7 +29,7 @@
  * by mio_obj_create(). The decision to not pack the above 2 steps
  * in mio_composite_obj_create() is to handle failures properly.
  * A failure could happen in creating a `normal` object or setting
- * composite layout, which requires different clear-up handling. 
+ * composite layout, which requires different clear-up handling.
  *
  * Note: MIO only supports creating a composite object from a newly
  * created one (not yet written any data).
@@ -56,7 +56,7 @@ mio_clovis_comp_obj_create(struct mio_obj *obj, struct mio_op *op)
 	m0_clovis_layout_op(cobj, M0_CLOVIS_EO_LAYOUT_SET,
 			    layout, &cops[0]);
 
-	rc = mio_driver_op_add(op, NULL, NULL, cops[0]);
+	rc = mio_driver_op_add(op, NULL, NULL, NULL, cops[0], NULL);
 	if (rc < 0)
 		goto error;
 	m0_clovis_op_launch(cops, ARRAY_SIZE(cops));
@@ -125,7 +125,7 @@ mio_clovis_comp_obj_add_layers(struct mio_obj *obj, int nr_layers,
 
         for (i = 0; i < nr_layers; i++) {
 		mio__obj_id_to_uint128(&layers[i].mcol_oid, &id128);
-		m0_clovis_obj_init(layer_objs + i, 
+		m0_clovis_obj_init(layer_objs + i,
 				   &mio_clovis_container.co_realm, &id128,
 				   mio_clovis_inst_confs->mc_default_layout_id);
                 rc = m0_clovis_composite_layer_add(
@@ -139,7 +139,7 @@ mio_clovis_comp_obj_add_layers(struct mio_obj *obj, int nr_layers,
 				layout, layer_objs[j].ob_entity.en_id);
 		goto error;
         }
-	
+
         m0_clovis_layout_op(cobj, M0_CLOVIS_EO_LAYOUT_SET,
 			    layout, &cops[0]);
 
@@ -147,7 +147,7 @@ mio_clovis_comp_obj_add_layers(struct mio_obj *obj, int nr_layers,
 	pp_args->alpa_layer_objs = layer_objs;
 	pp_args->alpa_layout = layout;
 	rc = mio_driver_op_add(op, clovis_comp_obj_add_layers_pp,
-			       pp_args, cops[0]);
+			       pp_args, NULL, cops[0], NULL);
 	if (rc < 0)
 		goto error;
 
@@ -184,7 +184,7 @@ clovis_comp_obj_get_layers(struct mio_obj *obj,
 	struct m0_clovis_layout *clayout = NULL;
 	struct m0_clovis_obj *cobj;
 	struct m0_clovis_op *cops[1] = {NULL};
-	
+
 	args = mio_mem_alloc(sizeof *args);
 	if (args == NULL)
 		return -ENOMEM;
@@ -201,10 +201,10 @@ clovis_comp_obj_get_layers(struct mio_obj *obj,
 	cobj->ob_layout = clayout;
 
         m0_clovis_layout_op(cobj, M0_CLOVIS_EO_LAYOUT_GET, clayout, &cops[0]);
-      
+
 	args->gla_data = query_data;
 	args->gla_clayout = clayout;
-	rc = mio_driver_op_add(op, pp, args, cops[0]);
+	rc = mio_driver_op_add(op, pp, args, NULL, cops[0], NULL);
 	if (rc < 0)
 		goto error;
 	m0_clovis_op_launch(cops, ARRAY_SIZE(cops));
@@ -243,7 +243,7 @@ clovis_comp_obj_del_layers_pp(struct mio_op *op)
 	args = (struct clovis_comp_obj_get_layers_args *)
 	       op->mop_drv_op_chain.mdoc_head->mdo_post_proc_data;
 	assert(args != NULL);
-	del_layers_args = 
+	del_layers_args =
 		(struct clovis_comp_obj_del_layers_args*) args->gla_data;
 	nr_layers_to_del = del_layers_args->dla_nr_layers_to_del;
 	layers_to_del = del_layers_args->dla_layers_to_del;
@@ -251,7 +251,7 @@ clovis_comp_obj_del_layers_pp(struct mio_op *op)
 
 	/* Here to remove the layers required. */
         for (i = 0; i < nr_layers_to_del; i++) {
-		mio__obj_id_to_uint128(&layers_to_del[i].mcol_oid, &id128);	
+		mio__obj_id_to_uint128(&layers_to_del[i].mcol_oid, &id128);
 		m0_clovis_composite_layer_del(clayout, id128);
         }
 
@@ -259,7 +259,7 @@ clovis_comp_obj_del_layers_pp(struct mio_op *op)
 	cobj = (struct m0_clovis_obj *)obj->mo_drv_obj;
         m0_clovis_layout_op(cobj, M0_CLOVIS_EO_LAYOUT_SET, clayout, &cops[0]);
 
-	rc = mio_driver_op_add(op, NULL, NULL, cops[0]);
+	rc = mio_driver_op_add(op, NULL, NULL, NULL, cops[0], NULL);
 	if (rc < 0)
 		goto exit;
 	m0_clovis_op_launch(cops, ARRAY_SIZE(cops));
@@ -285,7 +285,7 @@ mio_clovis_comp_obj_del_layers(struct mio_obj *obj,
 	 * (2) delete layers from the layout and launch an operation to
 	 *     update the layout in Mero service side.
 	 */
-	
+
 	args = mio_mem_alloc(sizeof *args);
 	if (args == NULL)
 		return -ENOMEM;
@@ -484,7 +484,7 @@ clovis_comp_obj_extent_query(struct mio_obj_id *layer_id,
                         &key, &keys->ov_buf[i], &keys->ov_vec.v_count[i]);
 		if (rc < 0)
 			break;
- 
+
 		if (set_vals) {
                 	val.cev_len = exts[i].moe_size;
 			rc = m0_clovis_composite_layer_idx_val_to_buf(
@@ -508,7 +508,7 @@ clovis_comp_obj_extent_query(struct mio_obj_id *layer_id,
 	pp_args->epa_rcs = rcs;
 	pp_args->epa_ret_exts = exts;
 	pp_args->epa_nr_ret_exts = nr_ret_exts;
-	rc = mio_driver_op_add(op, pp, pp_args, cops[0]);
+	rc = mio_driver_op_add(op, pp, pp_args, NULL, cops[0], NULL);
 	if (rc < 0)
 		goto err_exit;
 
@@ -550,7 +550,7 @@ mio_clovis_comp_obj_add_extents(struct mio_obj *obj,
 {
 	int rc;
 	struct clovis_comp_obj_exts_pp_args *pp_args;
-	
+
 	pp_args = mio_mem_alloc(sizeof *pp_args);
 	if (pp_args == NULL)
 		return -ENOMEM;
@@ -571,7 +571,7 @@ mio_clovis_comp_obj_del_extents(struct mio_obj *obj,
 {
 	int rc;
 	struct clovis_comp_obj_exts_pp_args *pp_args;
-	
+
 	pp_args = mio_mem_alloc(sizeof *pp_args);
 	if (pp_args == NULL)
 		return -ENOMEM;

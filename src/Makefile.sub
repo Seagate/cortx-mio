@@ -10,7 +10,7 @@ nobase_mio_include_HEADERS += src/mio.h \
 			      src/driver_clovis.h \
 			      src/logger.h
 
-lib_libmio_la_SOURCES += src/parser.c src/logger.c \
-			 src/utils.c src/mio.c src/mio_driver.c \
-			 src/hints.c src/driver_clovis.c \
-			 src/driver_clovis_comp_obj.c
+lib_libmio_la_SOURCES += src/parser.c src/logger.c src/utils.c \
+			 src/mio.c src/mio_driver.c src/hints.c \
+			 src/driver_clovis.c src/driver_clovis_obj.c \
+			 src/driver_clovis_kvs.c src/driver_clovis_comp_obj.c
