@@ -154,6 +154,8 @@ struct mio_driver_sys_ops {
 	int (*mdo_init) (struct mio *mio_inst);
 	void (*mdo_fini) (void);
 
+	int (*mdo_user_perm)(struct mio *mio_inst);
+
 	int (*mdo_thread_init)(struct mio_thread *thread);
 	void (*mdo_thread_fini)(struct mio_thread *thread);
 };
@@ -292,6 +294,11 @@ struct mio_mero_config {
 	 */
 	int mc_unit_size;
 	int mc_default_layout_id;
+
+	/*
+ 	 * Mero user group.
+ 	 */
+	char *mc_mero_group;
 };
 
 /**

@@ -10,6 +10,11 @@
 
 #include <errno.h>
 #include <assert.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <pwd.h>
+#include <grp.h>
+#include <uuid/uuid.h>
 
 #include "logger.h"
 #include "mio.h"
@@ -217,9 +222,74 @@ static void mio_clovis_thread_fini(struct mio_thread *thread)
 	mio_mem_free(thread->mt_drv_thread);
 }
 
+static int mio_clovis_user_perm(struct mio *mio_inst)
+{
+	int i;
+	int rc = 0;
+	int nr_grps = 0;
+	gid_t *gids;
+	struct group *mero_grp;
+	struct passwd *mio_user_pw;
+	struct mio_mero_config *drv;
+
+	errno = 0;
+	mio_user_pw = getpwuid(getuid());
+	if (mio_user_pw == NULL) {
+		fprintf(stderr, "Failed to get user ID: errno = -%d, %s\n",
+			errno, strerror(errno));
+		return -errno;
+	}
+
+	/* If it is `root`. */
+	if (mio_user_pw->pw_uid == 0)
+		return 0;
+
+	/* Check if the user is in the Mero group. */
+	drv = (struct mio_mero_config *)mio_inst->m_driver_confs;
+	if (drv->mc_mero_group == NULL) {
+		fprintf(stderr,
+			"No Mero group is specified and user is not root!\n");
+		return -EPERM;
+	}
+	mero_grp = getgrnam(drv->mc_mero_group);
+	if (mero_grp == NULL) {
+		fprintf(stderr, "Mero group [%s] doesn't exist!\n",
+			drv->mc_mero_group);
+		return -EPERM;
+	}
+
+	getgrouplist(mio_user_pw->pw_name, mio_user_pw->pw_gid,
+		     NULL, &nr_grps);
+	if (nr_grps == 0)
+		return -EPERM;
+	gids = mio_mem_alloc(nr_grps * sizeof(int));
+	if (gids == NULL) {
+		rc = -ENOMEM;
+		goto exit;
+	}
+
+	rc = getgrouplist(mio_user_pw->pw_name, mio_user_pw->pw_gid,
+			  gids, &nr_grps);
+	if (rc < 0)
+		goto exit;
+	for (i = 0; i < nr_grps; i++) {
+		if (gids[i] == mero_grp->gr_gid)
+			break;
+	}
+	if (i == nr_grps)
+		rc = -EPERM;
+	else
+		rc = 0;
+
+exit:
+	mio_mem_free(gids);
+	return rc;
+}
+
 static struct mio_driver_sys_ops mio_clovis_sys_ops = {
         .mdo_init = mio_clovis_init,
         .mdo_fini = mio_clovis_fini,
+        .mdo_user_perm = mio_clovis_user_perm,
         .mdo_thread_init = mio_clovis_thread_init,
         .mdo_thread_fini = mio_clovis_thread_fini
 };
