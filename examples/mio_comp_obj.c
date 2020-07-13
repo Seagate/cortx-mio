@@ -323,7 +323,7 @@ int main(int argc, char **argv)
 
 	rc = mio_init(comp_obj_params.cop_conf_fname);
 	if (rc < 0) {
-		fprintf(stderr, "mio_init failed! rc = %d\n", rc);
+		mio_cmd_error("mio_init()", rc);
 		exit(EXIT_FAILURE);
 	}
 
@@ -381,6 +381,8 @@ int main(int argc, char **argv)
 	mio_obj_close(&obj);
 
 exit:
+	if (rc != 0)
+		mio_cmd_error("", rc);
 	mio_fini();
 	mio_cmd_obj_args_fini(&comp_obj_params);
 	return rc;

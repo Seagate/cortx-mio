@@ -12,6 +12,7 @@
 #include <stdlib.h>
 
 #include "obj.h"
+#include "helpers.h"
 
 static void cat_usage(FILE *file, char *prog_name)
 {
@@ -47,7 +48,7 @@ int main(int argc, char **argv)
 
 	rc = mio_init(cat_params.cop_conf_fname);
 	if (rc < 0) {
-		fprintf(stderr, "mio_init failed! rc = %d\n", rc);
+		mio_cmd_error("Initialising MIO failed", rc);
 		exit(EXIT_FAILURE);
 	}
 
@@ -59,7 +60,7 @@ int main(int argc, char **argv)
 			      cat_params.cop_block_size,
 			      cat_params.cop_block_count);
 	if (rc < 0)
-		fprintf(stderr, "mio_cmd_obj_read failed! rc = %d\n", rc);
+		mio_cmd_error("Reading object failed", rc);
 
 	mio_fini();
 	if (dst_fname)

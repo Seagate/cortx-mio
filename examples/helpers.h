@@ -16,6 +16,7 @@
 int mio_cmd_strtou64(const char *arg, uint64_t *out);
 int mio_cmd_wait_on_op(struct mio_op *op);
 uint32_t mio_cmd_random(uint32_t max);
+void mio_cmd_error(char *msg, int error);
 
 #endif /* __HELPERS_H__ */
 

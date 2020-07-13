@@ -9,6 +9,7 @@
  */
 
 #include <string.h>     
+#include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <errno.h>
@@ -60,6 +61,11 @@ int mio_cmd_wait_on_op(struct mio_op *op)
 uint32_t mio_cmd_random(uint32_t max)
 {
 	return (uint32_t)random() % max;
+}
+
+void mio_cmd_error(char *msg, int error)
+{
+	fprintf(stderr, "%s: errno = %d, %s\n", msg, error, strerror(-error));
 }
 
 /*

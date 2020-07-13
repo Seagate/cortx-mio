@@ -287,7 +287,7 @@ static void* rwt_writer(void *in)
 			obj_to_read_list.otl_head.ot_next = todo;
 			obj_to_read_list.otl_nr_in_list++;
 		} else if (rc < 0) {
-			fprintf(stderr, "Failed to write to object! \n");
+			mio_cmd_error("Failed to write to object", rc);
 			obj_to_read_list.otl_nr_failed++;
 		}
 		pthread_cond_broadcast(&obj_to_read_list.otl_cond);
@@ -344,7 +344,7 @@ static void* rwt_reader(void *in)
 
 		pthread_mutex_lock(&obj_to_read_list.otl_mutex);
 		if (rc < 0) {
-			fprintf(stderr, "Failed to write to object! \n");
+			mio_cmd_error("Failed to read from object", rc);
 			obj_to_read_list.otl_nr_failed++;
 		} else {
 			matched = rwt_obj_verify_md5sums(todo);
@@ -569,7 +569,7 @@ int main(int argc, char **argv)
 
 	rc = mio_init(rwt_params.cop_conf_fname);
 	if (rc < 0) {
-		fprintf(stderr, "mio_init failed! errno = %d\n", rc);
+		mio_cmd_error("Initialising MIO failed", rc);
 		goto exit;
 	}
 
@@ -578,7 +578,7 @@ int main(int argc, char **argv)
 			   rwt_params.cop_block_size,
 			   rwt_params.cop_block_count);
 	if (rc < 0) {
-		fprintf(stderr, "Failed to start threads! errno = %d\n", rc);
+		mio_cmd_error("Failed to start threads", rc);
 		goto exit;
 	}
 

@@ -12,6 +12,7 @@
 #include <stdlib.h>
 
 #include "obj.h"
+#include "helpers.h"
 
 static void hset_usage(FILE *file, char *prog_name)
 {
@@ -50,7 +51,7 @@ static int obj_hint_set(struct mio_obj_id *oid)
 
 	mio_hints_fini(&hints);
 	mio_cmd_obj_close(&obj);
-	return 0;
+	return rc;
 }
 
 int main(int argc, char **argv)
@@ -62,13 +63,13 @@ int main(int argc, char **argv)
 
 	rc = mio_init(hset_params.cop_conf_fname);
 	if (rc < 0) {
-		fprintf(stderr, "mio_init failed! rc = %d\n", rc);
+		mio_cmd_error("Initialising MIO failed", rc);
 		exit(EXIT_FAILURE);
 	}
 
 	rc = obj_hint_set(&hset_params.cop_oid);
 	if (rc < 0)
-		fprintf(stderr, "mio_cmd_obj_hset failed! rc = %d\n", rc);
+		mio_cmd_error("Setting object's hints failed", rc);
 
 	mio_fini();
 	mio_cmd_obj_args_fini(&hset_params);
