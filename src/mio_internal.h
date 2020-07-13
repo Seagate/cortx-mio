@@ -336,8 +336,10 @@ uint64_t mio_byteorder_be64_to_cpu(uint64_t big_endian_64bits);
 int mio_conf_init(const char *config_file);
 void mio_conf_fini();
 
-void mio_obj_op_init(struct mio_op *op, struct mio_obj *obj,
-		     enum mio_obj_opcode opcode);
+int mio_instance_check();
+
+int mio_obj_op_init(struct mio_op *op, struct mio_obj *obj,
+		    enum mio_obj_opcode opcode);
 
 void mio_op_cb_failed(struct mio_op *op);
 void mio_op_cb_complete(struct mio_op *op);
