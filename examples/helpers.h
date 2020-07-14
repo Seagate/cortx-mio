@@ -16,7 +16,12 @@
 int mio_cmd_strtou64(const char *arg, uint64_t *out);
 int mio_cmd_wait_on_op(struct mio_op *op);
 uint32_t mio_cmd_random(uint32_t max);
+
 void mio_cmd_error(char *msg, int error);
+
+int mio_cmd_thread_init(pthread_t **ret_th, void* (*func)(void *), void *args);
+int mio_cmd_thread_join(pthread_t *th);
+int mio_cmd_thread_fini(pthread_t *th);
 
 #endif /* __HELPERS_H__ */
 

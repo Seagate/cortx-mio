@@ -71,6 +71,12 @@ struct mio_obj_ops {
 	int (*moo_size)(struct mio_obj *obj, struct mio_op *op);
 
 	/**
+	 * Exclusive whole object (blocking) lock.
+	 */
+	int (*moo_lock)(struct mio_obj *obj);
+	int (*moo_unlock)(struct mio_obj *obj);
+
+	/**
 	 * Load and store persistent hints. Unlike other operations,
 	 * storing/loading hints are synchronous operations because
 	 * not all hints are persistent hints, if applications use

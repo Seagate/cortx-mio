@@ -268,6 +268,9 @@ struct mio_obj {
 
 	/** Pointer to driver specific object structure. */
 	void *mo_drv_obj;
+
+	/** Pointer to driver specific object lock. */
+	void *mo_drv_obj_lock;
 };
 
 /**
@@ -375,6 +378,22 @@ int mio_obj_sync(struct mio_obj *obj, struct mio_op *op);
  * @return 0 for success, anything else for an error.
  */
 int mio_obj_size(struct mio_obj *obj, struct mio_op *op);
+
+/**
+ * Lock and unlock an object. Only exclusive whole object lock
+ * is supported. The usage of an object lock is similar to file
+ * lock flock().
+ *   - open object.
+ *   - lock
+ *   - do some IOs
+ *   - unlock
+ *   - close object.
+ *
+ * @param obj The object in question.
+ * @return 0 for success, anything else for an error.
+ */
+int mio_obj_lock(struct mio_obj *obj);
+int mio_obj_unlock(struct mio_obj *obj);
 
 /**
  * Data structure represents a record stored in a key-value set.

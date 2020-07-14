@@ -797,6 +797,51 @@ error:
 	return rc;
 }
 
+static int mio_clovis_obj_lock(struct mio_obj *obj)
+{
+	int rc = 0; 
+	struct m0_clovis_obj *cobj = (struct m0_clovis_obj *)obj->mo_drv_obj;
+	struct m0_clovis_rm_lock_req  *rm_lock;
+
+	if (cobj == NULL)
+		return -EINVAL;
+
+	rc = m0_clovis_obj_lock_init(cobj, NULL);
+	if (rc != 0)
+		return rc;
+
+	rm_lock = mio_mem_alloc(sizeof(*rm_lock));
+	if (rm_lock == NULL) {
+		m0_clovis_obj_lock_fini(cobj);
+		return -ENOMEM;
+	}
+		
+	rc = m0_clovis_obj_lock_get_sync(cobj, rm_lock, NULL);
+	if (rc < 0) {
+		m0_clovis_obj_lock_fini(cobj);
+		mio_mem_free(rm_lock);
+		return rc;
+	}
+
+	obj->mo_drv_obj_lock = (void *)rm_lock;
+	return 0;
+}
+
+static int mio_clovis_obj_unlock(struct mio_obj *obj)
+{
+	struct m0_clovis_obj *cobj;
+	struct m0_clovis_rm_lock_req  *rm_lock;
+
+	cobj = (struct m0_clovis_obj *)obj->mo_drv_obj;
+	rm_lock = (struct m0_clovis_rm_lock_req *)obj->mo_drv_obj_lock;
+	if (cobj == NULL || rm_lock == NULL)
+		return -EINVAL;
+	
+	m0_clovis_obj_lock_put(rm_lock);
+	m0_clovis_obj_lock_fini(cobj);
+	return 0;
+}
+
 /**
  * Note: currently Mero Clovis doesn't store size as object attribute
  * and doesn't have any API to query object size. MIO will use an index
@@ -1076,6 +1121,8 @@ static struct mio_obj_ops mio_clovis_obj_ops = {
         .moo_readv        = mio_clovis_obj_readv,
         .moo_sync         = mio_clovis_obj_sync,
         .moo_size         = mio_clovis_obj_size,
+        .moo_lock         = mio_clovis_obj_lock,
+        .moo_unlock       = mio_clovis_obj_unlock,
         .moo_hint_store   = mio_clovis_obj_hint_store,
         .moo_hint_load    = mio_clovis_obj_hint_load,
 };

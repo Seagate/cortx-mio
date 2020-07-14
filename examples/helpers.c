@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <errno.h>
+#include <pthread.h>
 
 #include "src/mio.h"
 
@@ -66,6 +67,43 @@ uint32_t mio_cmd_random(uint32_t max)
 void mio_cmd_error(char *msg, int error)
 {
 	fprintf(stderr, "%s: errno = %d, %s\n", msg, error, strerror(-error));
+}
+
+int mio_cmd_thread_init(pthread_t **ret_th, void* (*func)(void *), void *args)
+{
+	int rc;
+	pthread_t *th;
+
+	th = (pthread_t *) malloc(sizeof(*th));
+	if (th == NULL)
+		return -ENOMEM;
+
+	rc = pthread_create(th, NULL, func, args);
+	if (rc == 0)
+		*ret_th = th;
+
+	return -rc;
+}
+
+int mio_cmd_thread_join(pthread_t *th)
+{
+	int rc = 0;
+	void *result;
+
+	if (pthread_join(*th, &result) == 0) {
+		if (result) {
+			rc = *((int *)result);
+			free(result);
+		}
+		return rc;
+	} else
+		return -1;
+}
+
+void mio_cmd_thread_fini(pthread_t *th)
+{
+	free(th);
+	return;
 }
 
 /*
