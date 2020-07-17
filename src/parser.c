@@ -52,6 +52,7 @@ enum conf_key {
 	MERO_TM_RECV_QUEUE_MIN_LEN,
 	MERO_MAX_RPC_MSG_SIZE,
 	MERO_DEFAULT_UNIT_SIZE,
+	MERO_USER_GROUP,
 
 	/* Other drivers such as Ceph defined here. */
 };
@@ -131,6 +132,11 @@ struct conf_entry conf_table[] = {
 		.name = "MERO_DEFAULT_UNIT_SIZE",
 		.type = MERO
 	},
+	[MERO_USER_GROUP] = {
+		.name = "MERO_USER_GROUP",
+		.type = MERO
+	},
+
 };
 
 static enum mio_driver_id mio_inst_drv_id;
@@ -304,6 +310,9 @@ static int conf_extract_value(enum conf_key key, char *value)
 		break;
 	case MERO_IS_READ_VERIFY:
 		mero_conf->mc_is_read_verify = atoi(value);
+		break;
+	case MERO_USER_GROUP:
+		rc = conf_copy_str(&mero_conf->mc_mero_group, value);
 		break;
 	default:
 		break;

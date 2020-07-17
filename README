@@ -34,11 +34,13 @@ Run mio_rw_threads following the steps below:
 (1) Start Mero (follow the Mero instruction)
 
 (2) cd tests
+
 MIO provides a sample configuration file mio_config.yaml in this directory.
-Edit mio_config.yaml to reflect Mero configurations in your system: (a) replace
-the clovis local address, MERO_CLOVIS_INST_ADDR, to yours. (b) replace MERO_HA_ADDR
-with your HA address. (c) MERO_PROFILE and MERO_PROCESS_FID (usually no need to
-change these 2 parameters)
+Edit mio_config.yaml to reflect Mero configurations in your system:
+(a) replace the clovis local address, MERO_CLOVIS_INST_ADDR, to yours.
+(b) replace MERO_HA_ADDR with your HA address.
+(c) MERO_PROFILE and MERO_PROCESS_FID (usually no need to change these 2 parameters)
+(d) replace the MERO_USER_GROUP with the Mero user group in your system.
 
 Methods to get the above parameters:
 (a) hctl mero status
@@ -46,7 +48,10 @@ Methods to get the above parameters:
 (c) if your system is shipped with clovis sample apps, run
     clovis-sample-app-dir/scripts/c0appzrcgen 
 
-(3) sudo ../examples/mio_rw_threads -s 4096 -c 1 -n 10 -t 1 -y ./mio_config.yaml -o 1:12346800
+(3) add your account to Mero group then run mio_rw_thread
+    or run it as root
+
+sudo ../examples/mio_rw_threads -s 4096 -c 1 -n 10 -t 1 -y ./mio_config.yaml -o 1:12346800
 
 Usage of mio_rw_thread
   -o, --object         FID       Starting object ID

@@ -397,6 +397,13 @@ int mio_init(const char *yaml_conf)
 		return rc;
 	}
 
+	rc = mio_instance->m_driver->md_sys_ops->mdo_user_perm(mio_instance);
+	if (rc < 0) {
+		fprintf(stderr, "User's permission denied!\n");
+		mio_conf_fini();
+		return rc;
+	}
+
 	rc = mio_log_init(mio_instance->m_log_level, mio_instance->m_log_file);
 	if (rc < 0) {
 		fprintf(stderr, "Failed to initialise logging sub-system. \n");
