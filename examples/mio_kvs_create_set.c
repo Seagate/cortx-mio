@@ -12,6 +12,7 @@
 #include <stdlib.h>
 
 #include "kvs.h"
+#include "helpers.h"
 
 static void create_set_usage(FILE *file, char *prog_name)
 {
@@ -34,13 +35,13 @@ int main(int argc, char **argv)
 
 	rc = mio_init(create_set_params.ckp_conf_fname);
 	if (rc < 0) {
-		fprintf(stderr, "mio_init failed! rc = %d\n", rc);
+		mio_cmd_error("Initialising MIO failed", rc);
 		exit(EXIT_FAILURE);
 	}
 
 	rc = mio_cmd_kvs_create_set(&create_set_params.ckp_kid);
 	if (rc < 0)
-		fprintf(stderr, "mio_cmd_kvs_create_set failed! rc = %d\n", rc);
+		mio_cmd_error("Creating an KVS set failed", rc);
 
 	mio_fini();
 	mio_cmd_kvs_args_fini(&create_set_params);

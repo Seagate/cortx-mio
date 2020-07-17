@@ -14,6 +14,7 @@
 #include <asm/byteorder.h>
 
 #include "obj.h"
+#include "helpers.h"
 
 static void hstat_usage(FILE *file, char *prog_name)
 {
@@ -69,13 +70,13 @@ int main(int argc, char **argv)
 
 	rc = mio_init(hstat_params.cop_conf_fname);
 	if (rc < 0) {
-		fprintf(stderr, "mio_init failed! rc = %d\n", rc);
+		mio_cmd_error("Initialising MIO failed", rc);
 		exit(EXIT_FAILURE);
 	}
 
 	rc = obj_hint_stat(&hstat_params.cop_oid);
 	if (rc < 0)
-		fprintf(stderr, "mio_cmd_obj_hstat failed! rc = %d\n", rc);
+		mio_cmd_error("Listing object's hints failed", rc);
 
 	mio_fini();
 	mio_cmd_obj_args_fini(&hstat_params);
