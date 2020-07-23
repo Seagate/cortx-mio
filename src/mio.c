@@ -17,23 +17,24 @@
 #include "mio.h"
 
 struct mio_kvs mio_obj_attrs_kvs;
-struct mio *mio_instance;
+struct mio *mio_instance = NULL;
 
 int mio_instance_check()
 {
 	if (mio_instance == NULL) {
-		mio_log(MIO_ERROR, "MIO instance has not been initilised!\n");
+		/* As MIO instance is not initialised, can't use mio_log(). */
+		fprintf(stderr, "MIO instance has not been initilised!\n");
 		return -EINVAL;
 	}
 
 	if (mio_instance->m_driver == 0) {
-		mio_log(MIO_ERROR, "MIO instance has not set a driver!\n");
+		fprintf(stderr, "MIO instance has not set a driver!\n");
 		return -EINVAL;
 	}
 
 	if (mio_instance->m_driver->md_sys_ops == NULL ||
 	    mio_instance->m_driver->md_op_ops == NULL) {
-		mio_log(MIO_ERROR, "MIO driver is not set properly!\n");
+		fprintf(stderr, "MIO driver is not set properly!\n");
 		return -EINVAL;
 	}
 
@@ -186,8 +187,13 @@ int mio_obj_op_init(struct mio_op *op, struct mio_obj *obj,
 
 static int obj_init(struct mio_obj *obj, const struct mio_obj_id *oid)
 {
+	int rc;
+
 	if (oid == NULL || obj == NULL)
 		return -EINVAL;
+	rc = mio_instance_check();
+	if (rc < 0)
+		return rc;
 
 	mio_mem_copy(obj->mo_id.moi_bytes,
 		     (void *)oid->moi_bytes, MIO_OBJ_ID_LEN);
@@ -551,26 +557,27 @@ int mio_init(const char *yaml_conf)
 	rc = mio_instance->m_driver->md_sys_ops->mdo_user_perm(mio_instance);
 	if (rc < 0) {
 		fprintf(stderr, "User's permission denied!\n");
-		mio_conf_fini();
-		return rc;
+		goto error;
 	}
 
 	rc = mio_log_init(mio_instance->m_log_level, mio_instance->m_log_file);
 	if (rc < 0) {
 		fprintf(stderr, "Failed to initialise logging sub-system. \n");
-		mio_mem_free(mio_instance);
-		mio_instance = NULL;
-		mio_conf_fini();
-		return rc;
+		goto error;
 	}
 
 	rc = mio_instance->m_driver->md_sys_ops->mdo_init(mio_instance);
 	if (rc < 0) {
 		mio_log(MIO_ERROR, "Initialising MIO driver failed!\n");
-		mio_mem_free(mio_instance);
-		mio_instance = NULL;
-		mio_conf_fini();
+		goto error;
 	}
+
+	return rc;
+
+error:
+	mio_mem_free(mio_instance);
+	mio_instance = NULL;
+	mio_conf_fini();
 	return rc;
 }
 
