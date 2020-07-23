@@ -160,25 +160,29 @@ int mio_hint_map_get(struct mio_hint_map *map, int key, uint64_t *value)
 #define NKEYS (sizeof(hint_table)/sizeof(struct hint))
 enum mio_hint_type mio_hint_type(enum mio_hint_key key)
 {
-	assert(key >= 0 && key < NKEYS);
+	if (key < 0 || key >= NKEYS)
+		return -EINVAL;
 	return hint_table[key].h_type;
 }
 
 char* mio_hint_name(enum mio_hint_key key)
 {
-	assert(key >= 0 && key < NKEYS);
+	if (key < 0 || key >= NKEYS)
+		return NULL;
 	return hint_table[key].h_name;
 }
 
 int mio_hints_init(struct mio_hints *hints)
 {
-	assert(hints != NULL);
+	if (hints == NULL)
+		return -EINVAL;
 	return mio_hint_map_init(&hints->mh_map, MIO_OBJ_HINT_NUM);
 }
 
 void mio_hints_fini(struct mio_hints *hints)
 {
-	assert(hints != NULL);
+	if (hints == NULL)
+		return;
 	mio_hint_map_fini(&hints->mh_map);
 }
 
@@ -191,6 +195,9 @@ static int mio_obj_hint_store(struct mio_obj *obj)
 	int nr_phints = 0;
 	int phint_cnt = 0;
 	struct mio_hints *phints = &obj->mo_attrs.moa_phints;
+
+	if (obj == NULL)
+		return -EINVAL;
 
 	nr_hints = obj->mo_hints.mh_map.mhm_nr_set;
 
@@ -222,14 +229,36 @@ static int mio_obj_hint_store(struct mio_obj *obj)
 
 static int mio_obj_hint_load(struct mio_obj *obj)
 {
+	if (obj == NULL)
+		return -EINVAL;
 	return drv_obj_ops->moo_hint_load(obj);
+}
+
+static int mio_obj_hint_ops_check()
+{
+	int rc;
+
+	rc = mio_instance_check();
+	if (rc < 0)
+		return rc;
+
+	if (drv_obj_ops == NULL ||
+	    drv_obj_ops->moo_hint_load == NULL ||
+	    drv_obj_ops->moo_hint_store == NULL)
+		return -EOPNOTSUPP;
+
+	return 0;
 }
 
 int mio_obj_hints_set(struct mio_obj *obj, struct mio_hints *hints)
 {
 	int rc;
 
-	assert(obj != NULL && hints != NULL);
+	rc = mio_obj_hint_ops_check();
+	if (rc < 0)
+		return rc;
+	if (obj == NULL || hints == NULL)
+		return -EINVAL;
 	
 	rc = mio_hint_map_copy(&obj->mo_hints.mh_map, &hints->mh_map)? :
 	     mio_obj_hint_store(obj);
@@ -246,7 +275,11 @@ int mio_obj_hints_get(struct mio_obj *obj, struct mio_hints *hints)
 {
 	int rc;
 
-	assert(obj != NULL && hints != NULL);
+	rc = mio_obj_hint_ops_check();
+	if (rc < 0)
+		return rc;
+	if (obj == NULL || hints == NULL)
+		return -EINVAL;
 
 	rc = mio_obj_hint_load(obj);
 	if (rc < 0)
@@ -264,7 +297,8 @@ int mio_hint_add(struct mio_hints *hints,
 {
 	int rc;
 
-	assert(hints != NULL);
+	if (hints == NULL)
+		return -EINVAL;
 	/* Overwrite the hint's value if it has already been set before. */
 	rc = mio_hint_map_set(&hints->mh_map, hint_key, hint_value);
 	return rc;
@@ -275,7 +309,8 @@ int mio_hint_lookup(struct mio_hints *hints,
 {
 	int rc;
 
-	assert(hints != NULL);
+	if (hints == NULL)
+		return -EINVAL;
 	rc = mio_hint_map_get(&hints->mh_map, hint_key, hint_value);
 	return rc;
 }
