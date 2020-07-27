@@ -74,44 +74,6 @@ static void rw_threads_usage(FILE *file, char *prog_name)
 , prog_name);
 }
 
-static int
-rwt_thread_init(pthread_t **ret_th, void* (*func)(void *), void *args)
-{
-	int rc;
-	pthread_t *th;
-
-	th = (pthread_t *) malloc(sizeof(*th));
-	if (th == NULL)
-		return -ENOMEM;
-
-	rc = pthread_create(th, NULL, func, args);
-	if (rc == 0)
-		*ret_th = th;
-
-	return -rc;
-}
-
-static int rwt_thread_join(pthread_t *th)
-{
-	int rc = 0;
-	void *result;
-
-	if (pthread_join(*th, &result) == 0) {
-		if (result) {
-			rc = *((int *)result);
-			free(result);
-		}
-		return rc;
-	} else
-		return -1;
-}
-
-static void rwt_thread_fini(pthread_t *th)
-{
-	free(th);
-	return;
-}
-
 static void 
 rwt_generate_data(uint32_t bcount, uint32_t bsize,
 		  struct mio_iovec *data, MD5_CTX *md5_ctx)
@@ -498,7 +460,7 @@ mio_rwt_start(int nr_threads, struct mio_obj_id *st_oid, int nr_objs,
 
 	for (i = 0; i < nr_threads; i++) {
 		write_tids[i] = i;
-		rc = rwt_thread_init(
+		rc = mio_cmd_thread_init(
 			write_threads + i, &rwt_writer, write_tids + i);
 		if (rc < 0)
 			goto error;
@@ -506,7 +468,7 @@ mio_rwt_start(int nr_threads, struct mio_obj_id *st_oid, int nr_objs,
 
 	for (i = 0; i < nr_threads; i++) {
 		read_tids[i] = i;
-		rc = rwt_thread_init(
+		rc = mio_cmd_thread_init(
 			read_threads + i, &rwt_reader, read_tids + i);
 		if (rc < 0)
 			goto error;
@@ -534,8 +496,8 @@ static void mio_rwt_stop(int nr_threads)
 		if (write_threads[i] == NULL)
 			break;
 
-		rwt_thread_join(write_threads[i]);
-		rwt_thread_fini(write_threads[i]);
+		mio_cmd_thread_join(write_threads[i]);
+		mio_cmd_thread_fini(write_threads[i]);
 		write_threads[i] = NULL;
 	}
 
@@ -543,8 +505,8 @@ static void mio_rwt_stop(int nr_threads)
 		if (read_threads[i] == NULL)
 			break;
 
-		rwt_thread_join(read_threads[i]);
-		rwt_thread_fini(read_threads[i]);
+		mio_cmd_thread_join(read_threads[i]);
+		mio_cmd_thread_fini(read_threads[i]);
 		read_threads[i] = NULL;
 
 	}

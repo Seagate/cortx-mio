@@ -301,6 +301,32 @@ int mio_obj_size(struct mio_obj *obj, struct mio_op *op)
 	return rc;
 }
 
+int mio_obj_lock(struct mio_obj *obj)
+{
+	int rc;
+
+	rc = mio_instance_check();
+	if (rc < 0)
+		return rc;
+	if (obj == NULL)
+		return -EINVAL;
+
+	return obj->mo_drv_obj_ops->moo_lock(obj);
+}
+
+int mio_obj_unlock(struct mio_obj *obj)
+{
+	int rc;
+
+	rc = mio_instance_check();
+	if (rc < 0)
+		return rc;
+	if (obj == NULL)
+		return -EINVAL;
+
+	return obj->mo_drv_obj_ops->moo_unlock(obj);
+}
+
 /* --------------------------------------------------------------- *
  *                     Key-value Store                             *
  * ----------------------------------------------------------------*/

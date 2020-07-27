@@ -105,6 +105,7 @@ noinst_PROGRAMS                   += examples/mio_kvs_retrieve
 noinst_PROGRAMS                   += examples/mio_kvs_del_pairs 
 noinst_PROGRAMS                   += examples/mio_comp_obj_example 
 noinst_PROGRAMS                   += examples/mio_rw_threads 
+noinst_PROGRAMS                   += examples/mio_rw_lock 
 
 examples_mio_cat_CPPFLAGS = -DMIO_TARGET='mio_cat' $(AM_CPPFLAGS)
 examples_mio_cat_LDADD    = $(top_builddir)/lib/libmio.la
@@ -142,8 +143,11 @@ examples_mio_kvs_del_pairs_LDADD    = $(top_builddir)/lib/libmio.la
 examples_mio_comp_obj_example_CPPFLAGS = -DMIO_TARGET='mio_comp_obj_example' $(AM_CPPFLAGS)
 examples_mio_comp_obj_example_LDADD    = $(top_builddir)/lib/libmio.la
 
-examples_mio_rw_threads_CPPFLAGS = -DMIO_TARGET='mio_comp_obj_example' $(AM_CPPFLAGS)
+examples_mio_rw_threads_CPPFLAGS = -DMIO_TARGET='mio_rw_threads' $(AM_CPPFLAGS)
 examples_mio_rw_threads_LDADD    = $(top_builddir)/lib/libmio.la -lpthread -lcrypto -lssl
+
+examples_mio_rw_lock_CPPFLAGS = -DMIO_TARGET='mio_rw_lock' $(AM_CPPFLAGS)
+examples_mio_rw_lock_LDADD    = $(top_builddir)/lib/libmio.la -lpthread -lcrypto -lssl
 
 include $(top_srcdir)/examples/Makefile.sub
 
