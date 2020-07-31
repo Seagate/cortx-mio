@@ -40,7 +40,7 @@ void mio_log(enum mio_log_level lev, const char *fmt, ...)
 
 int mio_log_init(enum mio_log_level level, char *logfile)
 {
-	FILE *fp;	
+	FILE *fp;
 
 	if (logfile != NULL) {
 		fp = fopen(logfile, "w");
@@ -50,7 +50,7 @@ int mio_log_init(enum mio_log_level level, char *logfile)
 			return -errno;
 		}
 	} else
-		fp = stderr; 
+		fp = stderr;
 
 	mio_log_level = level;
 	mio_log_file  = fp;

@@ -22,8 +22,11 @@ static struct mio_driver mio_drivers[MIO_DRIVER_NUM];
  * functions for object, key/value and others before launching
  * the operations to add driver specific operation into the chain.
  */
-int mio_driver_op_add(struct mio_op *op, mio_driver_op_postprocess post_proc,
-		       void *post_proc_data, void *drv_op)
+int mio_driver_op_add(struct mio_op *op,
+		      mio_driver_op_postprocess post_proc,
+		      void *post_proc_data,
+		      mio_driver_op_fini op_fini,
+		      void *drv_op, void *drv_op_args)
 {
 	struct mio_driver_op *dop;
 
@@ -39,8 +42,10 @@ int mio_driver_op_add(struct mio_op *op, mio_driver_op_postprocess post_proc,
  	 * for details.
  	 */
 	dop->mdo_op = drv_op;
+	dop->mdo_op_args = drv_op_args;
 	dop->mdo_post_proc = post_proc;
 	dop->mdo_post_proc_data = post_proc_data;
+	dop->mdo_op_fini = op_fini;
 
 	/* Insert into the chain. */
 	dop->mdo_next = op->mop_drv_op_chain.mdoc_head;
@@ -48,7 +53,7 @@ int mio_driver_op_add(struct mio_op *op, mio_driver_op_postprocess post_proc,
 
 	/*
 	 * Set driver operation's callbacks which will invoke real
-	 * application set callbacks when all job of MIO op is done. 
+	 * application set callbacks when all job of MIO op is done.
 	 */
 	if (op->mop_op_ops != NULL && op->mop_op_ops->mopo_set_cbs &&
 	    op->mop_app_cbs.moc_cb_complete != NULL &&

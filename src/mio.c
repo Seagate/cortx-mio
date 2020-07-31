@@ -55,7 +55,7 @@ void mio_op_init(struct mio_op *op)
 	/*
  	 * When mio_op_init() is called, no driver specific operation
  	 * has been created and initialised yet.
- 	 */ 
+ 	 */
 	mio_memset(op, 0, sizeof *op);
 	op->mop_op_ops = mio_instance->m_driver->md_op_ops;
 }
@@ -78,7 +78,7 @@ struct mio_op* mio_op_alloc_init()
 	op = mio_mem_alloc(sizeof *op);
 	if (op != NULL)
 		mio_op_init(op);
-	return op;	
+	return op;
 }
 
 void mio_op_fini_free(struct mio_op *op)
@@ -118,7 +118,7 @@ again:
 				mop, timeout, &pop->mp_retstate);
 
 		post_proc = mop->mop_drv_op_chain.mdoc_head->mdo_post_proc;
-		if (pop->mp_retstate == MIO_OP_COMPLETED) { 
+		if (pop->mp_retstate == MIO_OP_COMPLETED) {
 			if (post_proc != NULL) {
 				rc = post_proc(mop);
 				/*
@@ -137,10 +137,10 @@ again:
 		} else if (pop->mp_retstate == MIO_OP_FAILED)
 			op_done = true;
 
-		if (op_done)		
+		if (op_done)
 			nr_done++;
 	}
-	
+
 	end = mio_now();
 	if (timeout == MIO_TIME_NEVER && nr_done != nr_ops)
 		goto again;
@@ -202,8 +202,8 @@ static int obj_init(struct mio_obj *obj, const struct mio_obj_id *oid)
  	 * TODO: map to an attributes key-value set by a policy
  	 * such as object ID.
  	 */
-	obj->mo_md_kvs = &mio_obj_attrs_kvs; 
-	mio_hint_map_init(&obj->mo_hints.mh_map, MIO_OBJ_HINT_NUM); 
+	obj->mo_md_kvs = &mio_obj_attrs_kvs;
+	mio_hint_map_init(&obj->mo_hints.mh_map, MIO_OBJ_HINT_NUM);
 	return 0;
 }
 
@@ -222,7 +222,7 @@ void mio_obj_close(struct mio_obj *obj)
 {
 	if (obj == NULL)
 		return;
-	mio_hint_map_fini(&obj->mo_hints.mh_map); 
+	mio_hint_map_fini(&obj->mo_hints.mh_map);
 	if (obj->mo_drv_obj_ops->moo_close != NULL)
 		obj->mo_drv_obj_ops->moo_close(obj);
 }
@@ -310,6 +310,9 @@ int mio_obj_lock(struct mio_obj *obj)
 		return rc;
 	if (obj == NULL)
 		return -EINVAL;
+	if (obj->mo_drv_obj_ops->moo_lock == NULL ||
+	    obj->mo_drv_obj_ops->moo_unlock == NULL)
+		return -EOPNOTSUPP;
 
 	return obj->mo_drv_obj_ops->moo_lock(obj);
 }
@@ -323,6 +326,9 @@ int mio_obj_unlock(struct mio_obj *obj)
 		return rc;
 	if (obj == NULL)
 		return -EINVAL;
+	if (obj->mo_drv_obj_ops->moo_lock == NULL ||
+	    obj->mo_drv_obj_ops->moo_unlock == NULL)
+		return -EOPNOTSUPP;
 
 	return obj->mo_drv_obj_ops->moo_unlock(obj);
 }
@@ -399,7 +405,7 @@ int mio_kvs_pair_put(struct mio_kvs_id *kid,
 
 int mio_kvs_pair_del(struct mio_kvs_id *kid,
                      int nr_kvps, struct mio_kv_pair *kvps,
-                     int32_t *rcs, struct mio_op *op) 
+                     int32_t *rcs, struct mio_op *op)
 {
 	int rc;
 

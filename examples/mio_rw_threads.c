@@ -74,7 +74,7 @@ static void rw_threads_usage(FILE *file, char *prog_name)
 , prog_name);
 }
 
-static void 
+static void
 rwt_generate_data(uint32_t bcount, uint32_t bsize,
 		  struct mio_iovec *data, MD5_CTX *md5_ctx)
 {
@@ -99,7 +99,7 @@ static bool rwt_obj_verify_md5sums(struct rwt_obj_todo *todo)
 	int i;
 	int rc;
 
-	obj_id_printf(&todo->ot_oid);	
+	obj_id_printf(&todo->ot_oid);
 	printf("\t");
 	for (i = 0; i < MD5_DIGEST_LENGTH; i++)
 		printf("%02x", todo->ot_md5sum_write[i]);
@@ -122,6 +122,7 @@ static int rwt_obj_write(struct rwt_obj_todo *todo)
 	uint32_t block_size;
 	uint32_t block_count;
 	uint64_t last_index;
+	uint64_t max_index;
 	struct mio_iovec *data;
 	struct mio_obj obj;
 	struct mio_obj_id *oid = &todo->ot_oid;
@@ -129,6 +130,7 @@ static int rwt_obj_write(struct rwt_obj_todo *todo)
 
 	block_size = todo->ot_block_size;
 	block_count = todo->ot_block_count;
+	max_index = block_size * block_count;
 
 	/* Create the target object if it doesn't exist. */
 	memset(&obj, 0, sizeof obj);
@@ -139,9 +141,10 @@ static int rwt_obj_write(struct rwt_obj_todo *todo)
 	last_index = 0;
 	MD5_Init(&md5_ctx);
 	while (block_count > 0) {
-		bcount = (block_count > MIO_CMD_MAX_BLOCK_COUNT)?
-			  MIO_CMD_MAX_BLOCK_COUNT:block_count;
-		rc = obj_alloc_iovecs(&data, bcount, block_size, last_index);
+		bcount = (block_count > MIO_CMD_MAX_BLOCK_COUNT_PER_OP)?
+			  MIO_CMD_MAX_BLOCK_COUNT_PER_OP : block_count;
+		rc = obj_alloc_iovecs(&data, bcount, block_size,
+				      last_index, max_index);
 		if (rc != 0)
 			break;
 		rwt_generate_data(bcount, block_size, data, &md5_ctx);
@@ -171,6 +174,7 @@ static int rwt_obj_read(struct rwt_obj_todo *todo)
 	uint32_t block_size;
 	uint32_t block_count;
 	uint64_t last_index;
+	uint64_t max_index;
 	struct mio_iovec *data;
 	struct mio_obj obj;
 	struct mio_obj_id *oid = &todo->ot_oid;
@@ -178,6 +182,7 @@ static int rwt_obj_read(struct rwt_obj_todo *todo)
 
 	block_size = todo->ot_block_size;
 	block_count = todo->ot_block_count;
+	max_index = block_size * block_count;
 
 	memset(&obj, 0, sizeof obj);
 	rc = obj_open(oid, &obj);
@@ -187,9 +192,10 @@ static int rwt_obj_read(struct rwt_obj_todo *todo)
 	last_index = 0;
 	MD5_Init(&md5_ctx);
 	while (block_count > 0) {
-		bcount = (block_count > MIO_CMD_MAX_BLOCK_COUNT)?
-			  MIO_CMD_MAX_BLOCK_COUNT:block_count;
-		rc = obj_alloc_iovecs(&data, bcount, block_size, last_index);
+		bcount = (block_count > MIO_CMD_MAX_BLOCK_COUNT_PER_OP)?
+			  MIO_CMD_MAX_BLOCK_COUNT_PER_OP : block_count;
+		rc = obj_alloc_iovecs(&data, bcount, block_size,
+				      last_index, max_index);
 		if (rc != 0)
 			break;
 
@@ -221,7 +227,7 @@ dest_close:
 static void* rwt_writer(void *in)
 {
 	int rc;
-	struct rwt_obj_todo *todo;	
+	struct rwt_obj_todo *todo;
 	struct mio_thread thread;
 
 	mio_thread_init(&thread);
@@ -257,7 +263,7 @@ static void* rwt_writer(void *in)
 	}
 
 	mio_thread_fini(&thread);
-	
+
 	pthread_mutex_lock(&obj_to_read_list.otl_mutex);
 	pthread_cond_broadcast(&obj_to_read_list.otl_cond);
 	pthread_mutex_unlock(&obj_to_read_list.otl_mutex);
@@ -269,7 +275,7 @@ static void* rwt_reader(void *in)
 {
 	int rc = 0;
 	bool matched = false;
-	struct rwt_obj_todo *todo;	
+	struct rwt_obj_todo *todo;
 	struct mio_thread thread;
 	int tid = *((int *)in);
 	bool read_all_done = false;
@@ -284,7 +290,7 @@ static void* rwt_reader(void *in)
 	while(1) {
 		pthread_mutex_lock(&obj_to_read_list.otl_mutex);
 		while (obj_to_read_list.otl_nr_in_list == 0) {
-			if ((obj_to_read_list.otl_nr_done + 
+			if ((obj_to_read_list.otl_nr_done +
 			     obj_to_read_list.otl_nr_failed) ==
 			    obj_to_read_list.otl_nr_todo) {
 				read_all_done = true;
@@ -316,7 +322,7 @@ static void* rwt_reader(void *in)
 			if ((obj_to_read_list.otl_nr_done +
 			     obj_to_read_list.otl_nr_failed) ==
 		    	    obj_to_read_list.otl_nr_todo)
-				read_all_done = true;	
+				read_all_done = true;
 		}
 		pthread_mutex_unlock(&obj_to_read_list.otl_mutex);
 
@@ -329,7 +335,7 @@ exit:
 	}
 
 	mio_thread_fini(&thread);
-	
+
 	pthread_mutex_lock(&obj_to_read_list.otl_mutex);
 	pthread_cond_broadcast(&obj_to_read_list.otl_cond);
 	pthread_mutex_unlock(&obj_to_read_list.otl_mutex);
@@ -443,7 +449,7 @@ mio_rwt_start(int nr_threads, struct mio_obj_id *st_oid, int nr_objs,
 	int rc = 0;
 
 	rwt_todo_lists_init(st_oid, nr_objs, block_size, block_count);
-	
+
 	/*
 	 * For simplicity, the same number of READ and WRITE threads
 	 * are created.
@@ -452,7 +458,7 @@ mio_rwt_start(int nr_threads, struct mio_obj_id *st_oid, int nr_objs,
 	write_threads = malloc(nr_threads * sizeof(*write_threads));
 	read_tids = malloc(nr_threads * sizeof(*read_tids));
 	write_tids = malloc(nr_threads * sizeof(*write_tids));
-	if (read_threads == NULL || write_threads == NULL || 
+	if (read_threads == NULL || write_threads == NULL ||
 	    read_tids == NULL || write_tids == NULL) {
 		rc = -ENOMEM;
 		goto error;
@@ -515,7 +521,7 @@ static void mio_rwt_stop(int nr_threads)
 	free(read_tids);
 	free(write_tids);
 
-	rwt_report();	
+	rwt_report();
 
 	rwt_todo_lists_fini();
 

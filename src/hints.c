@@ -81,7 +81,7 @@ int mio_hint_map_copy(struct mio_hint_map *to, struct mio_hint_map *from)
 	uint64_t hvalue;
 	int nr_new = 0;
 
-	assert(to != NULL && from != NULL);	
+	assert(to != NULL && from != NULL);
 
 	if (to->mhm_nr_entries == 0 ) {
 		rc = mio_hint_map_init(to, from->mhm_nr_entries);
@@ -135,7 +135,7 @@ int mio_hint_map_set(struct mio_hint_map *map, int key, uint64_t value)
 		else
 			map->mhm_nr_set++;
 	}
-	
+
 	map->mhm_keys[i] = key;
 	map->mhm_values[i] = value;
 	return 0;
@@ -259,7 +259,7 @@ int mio_obj_hints_set(struct mio_obj *obj, struct mio_hints *hints)
 		return rc;
 	if (obj == NULL || hints == NULL)
 		return -EINVAL;
-	
+
 	rc = mio_hint_map_copy(&obj->mo_hints.mh_map, &hints->mh_map)? :
 	     mio_obj_hint_store(obj);
 	if (rc < 0) {
@@ -284,7 +284,7 @@ int mio_obj_hints_get(struct mio_obj *obj, struct mio_hints *hints)
 	rc = mio_obj_hint_load(obj);
 	if (rc < 0)
 		return rc;
-	
+
 	rc = mio_hint_map_copy(&hints->mh_map, &obj->mo_hints.mh_map);
 	return rc;
 }

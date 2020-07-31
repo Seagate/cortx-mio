@@ -100,7 +100,7 @@ exit:
 	free(layer_ids);
 	free(exts);
 	return rc;
-} 
+}
 
 static int
 comp_obj_del_extents(struct mio_obj *obj, int nr_layers, int nr_exts)

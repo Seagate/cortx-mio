@@ -86,14 +86,14 @@ struct mio_op {
 	unsigned int mop_opcode; /* Type of operation. */
 	union {                  /* Which object or key-value set. */
 		struct mio_obj *obj;
-		struct mio_kvs_id *kvs_id; 
+		struct mio_kvs_id *kvs_id;
 	} mop_who;
 	int mop_state;           /* Current state of operation. */
 	int mop_rc;              /* == 0 when operation successes,
 				  *  < 0 the error code if the
 				  *      operation fails. */
 
-	struct mio_op_app_cbs mop_app_cbs;	
+	struct mio_op_app_cbs mop_app_cbs;
 
 	/* See mio_drv_op_chain in mio_inernal for explanation. */
 	struct mio_driver_op_chain mop_drv_op_chain;
@@ -157,13 +157,13 @@ int mio_op_poll(struct mio_pollop *ops, int nr_ops, uint64_t timeout);
  * Callbacks provides an alternative way to handle operations
  * asynchronously. mio_op_set_callbacks() set callbacks for
  * an operation.
- * 
+ *
  * @param op The pointer to operation.
  * @cb_complete The callback function is triggered when
  * the operation reach COMPLETED state.
  * @cb_complete The callback function is triggered when
  * the operation turns into FAILED state.
- * @cb_cb The data passed to callback functions. 
+ * @cb_cb The data passed to callback functions.
  */
 void mio_op_callbacks_set(struct mio_op *op,
 			  mio_callback cb_complete,
@@ -197,7 +197,7 @@ enum mio_hint_key {
  * Hints are stored and managed as a map between hint’s key and value.
  */
 struct mio_hints {
-    struct mio_hint_map mh_map; 
+    struct mio_hint_map mh_map;
 };
 
 /**
@@ -228,9 +228,9 @@ struct mio_pool {
  * an object.
  */
 struct mio_iovec {
-	char   *miov_base;  /* Base address. */
-	off_t   miov_off;   /* Offset. */
-	size_t  miov_len;   /* Length. */
+	char *miov_base;    /* Base address. */
+	uint64_t miov_off;  /* Offset. */
+	size_t miov_len;    /* Length. */
 };
 
 enum {
@@ -280,9 +280,9 @@ struct mio_obj {
 
  * @param oid The object identifier.
  * @param obj Pointer to the object handle which can be used can be
- * subsequently used to access the object until the object is closed.  
+ * subsequently used to access the object until the object is closed.
  * Note that the object handle must be pre-allocated by application.
- * @param op The open operation for progress query. See Table 5 for 
+ * @param op The open operation for progress query. See Table 5 for
  * mio_op data structure definition
  * @return 0 for success, < 0 for error.
  */
@@ -297,7 +297,7 @@ void mio_obj_close(struct mio_obj *obj);
 
 /**
  * Create an object with identifier ‘oid’. See mio_obj_open()
- * above for notes on object identifier. 
+ * above for notes on object identifier.
  * Note that an internal key-value set will be created when
  * creating an object, offering a convenient mechanism
  * for applications to store and query customized object attributes.
@@ -335,7 +335,7 @@ int mio_obj_delete(const struct mio_obj_id *oid, struct mio_op *op);
  * the members of the offsets:
  * offsets[0], offsets[1], ..., offsets[iovcnt-1] into a set
  * of buffers of iov: iov[0], iov[1], ..., iov[iovcnt-1].
- * 
+ *
  * Upon successfully returning, mio_obj_writev() and mio_obj_readv()
  * return with a launched operation. op can be used to query
  * the process of the operation.
@@ -467,7 +467,7 @@ int mio_kvs_pair_put(struct mio_kvs_id *kvs_id,
 
 int mio_kvs_pair_del(struct mio_kvs_id *kvs_id,
                      int nr_kvps, struct mio_kv_pair *kvps,
-                     int32_t *rcs, struct mio_op *op); 
+                     int32_t *rcs, struct mio_op *op);
 
 /**
  * mio_kvs_create_set() creates a key-value set,
@@ -488,7 +488,7 @@ int mio_kvs_del_set(struct mio_kvs_id *kvs_id, struct mio_op *op);
  * hints allows us to set or get multiple hints in one single call.
  *
  * @param obj Pointer to the object handle.
- * @param hints Hints to set for an object. 
+ * @param hints Hints to set for an object.
  * @return 0 for success, < 0 for error.
  */
 int mio_obj_hints_set(struct mio_obj *obj, struct mio_hints *hints);
@@ -507,13 +507,13 @@ char* mio_hint_name(enum mio_hint_key key);
 
 /**
  * TODO: short description/definition of composite object.
- * 
+ *
  * Data structures and APIs for MIO composite object.
  *   - object extent is defined as a tuple (offset, size).
  *   - Composite layer (sub-object).
  *   - Composite object operations for MIO driver implementation.
  *   - APIs to create/delete/list layers.
- *   - APIs to create/delete/list extents. 
+ *   - APIs to create/delete/list extents.
  */
 struct mio_obj_ext {
 	off_t  moe_off;
@@ -566,7 +566,7 @@ int mio_composite_obj_del_layers(struct mio_obj *obj,
  * List layers from highest priority to lowest one.
  * The memory to store layers and priorities are allocated
  * inside the function.
- * 
+ *
  * @param object The object to add to.
  * @param layout[out] The returned composite layout.
  * @param op The operation will be initialised when returned.
@@ -613,7 +613,7 @@ mio_composite_obj_get_extents(struct mio_obj *obj,
 
 /**
  * The structure 'mio' holds global information of underlying object store
- * and key-value set.  
+ * and key-value set.
  */
 struct mio {
 	enum mio_log_level m_log_level;
@@ -634,7 +634,7 @@ extern struct mio *mio_instance;
 int mio_init(const char *yaml_conf);
 
 /**
- * Finalises Maestro IO interface. 
+ * Finalises Maestro IO interface.
  */
 void mio_fini();
 

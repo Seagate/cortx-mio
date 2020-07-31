@@ -82,7 +82,7 @@ static void rwl_threads_usage(FILE *file, char *prog_name)
 , prog_name);
 }
 
-static void 
+static void
 rwl_generate_data(uint32_t bcount, uint32_t bsize,
 		  struct mio_iovec *data, MD5_CTX *md5_ctx)
 {
@@ -142,6 +142,7 @@ static int rwl_obj_write(struct mio_obj_id *oid)
 	uint32_t block_size;
 	uint32_t block_count;
 	uint64_t last_index;
+	uint64_t max_index;
 	struct mio_iovec *data;
 	struct mio_obj obj;
 	struct rwl_io *io;
@@ -158,7 +159,7 @@ static int rwl_obj_write(struct mio_obj_id *oid)
 		goto close_obj;
 
 	/* Get the IO task. */
-	pthread_mutex_lock(&cc_io_report.ior_mutex);	
+	pthread_mutex_lock(&cc_io_report.ior_mutex);
 	io = cc_io_report.ior_ioses + cc_io_report.ior_nr_done;
 	io->io_role = RWL_WRITER;
 	cc_io_report.ior_nr_done++;
@@ -166,12 +167,15 @@ static int rwl_obj_write(struct mio_obj_id *oid)
 
 	block_size = io->io_block_size;
 	block_count = io->io_block_count;
+	max_index = block_size * block_count;
+
 	last_index = 0;
 	MD5_Init(&md5_ctx);
 	while (block_count > 0) {
-		bcount = (block_count > MIO_CMD_MAX_BLOCK_COUNT)?
-			  MIO_CMD_MAX_BLOCK_COUNT:block_count;
-		rc = obj_alloc_iovecs(&data, bcount, block_size, last_index);
+		bcount = (block_count > MIO_CMD_MAX_BLOCK_COUNT_PER_OP)?
+			  MIO_CMD_MAX_BLOCK_COUNT_PER_OP : block_count;
+		rc = obj_alloc_iovecs(&data, bcount, block_size,
+				      last_index, max_index);
 		if (rc != 0)
 			break;
 		rwl_generate_data(bcount, block_size, data, &md5_ctx);
@@ -204,6 +208,7 @@ static int rwl_obj_read(struct mio_obj_id *oid)
 	uint32_t block_size;
 	uint32_t block_count;
 	uint64_t last_index;
+	uint64_t max_index;
 	struct mio_iovec *data;
 	struct mio_obj obj;
 	struct rwl_io *io;
@@ -219,7 +224,7 @@ static int rwl_obj_read(struct mio_obj_id *oid)
 	if (rc < 0)
 		goto close_obj;
 
-	pthread_mutex_lock(&cc_io_report.ior_mutex);	
+	pthread_mutex_lock(&cc_io_report.ior_mutex);
 	io = cc_io_report.ior_ioses + cc_io_report.ior_nr_done;
 	io->io_role = RWL_READER;
 	cc_io_report.ior_nr_done++;
@@ -227,12 +232,15 @@ static int rwl_obj_read(struct mio_obj_id *oid)
 
 	block_size = io->io_block_size;
 	block_count = io->io_block_count;
+	max_index = block_size * block_count;
+
 	last_index = 0;
 	MD5_Init(&md5_ctx);
 	while (block_count > 0) {
-		bcount = (block_count > MIO_CMD_MAX_BLOCK_COUNT)?
-			  MIO_CMD_MAX_BLOCK_COUNT:block_count;
-		rc = obj_alloc_iovecs(&data, bcount, block_size, last_index);
+		bcount = (block_count > MIO_CMD_MAX_BLOCK_COUNT_PER_OP)?
+			  MIO_CMD_MAX_BLOCK_COUNT_PER_OP : block_count;
+		rc = obj_alloc_iovecs(&data, bcount, block_size,
+				      last_index, max_index);
 		if (rc != 0)
 			break;
 
@@ -275,7 +283,7 @@ static void* rwl_writer(void *in)
 	if (rc < 0)
 		fprintf(stderr, "Failed to write to object: errno = %d\n", rc);
 
-	mio_thread_fini(&thread);	
+	mio_thread_fini(&thread);
 	return NULL;
 }
 
@@ -292,7 +300,7 @@ static void* rwl_reader(void *in)
 		fprintf(stderr, "Failed to read from object: errno = %d\n", rc);
 
 	mio_thread_fini(&thread);
-	
+
 	return NULL;
 }
 
@@ -342,7 +350,7 @@ mio_rwl_start(int nr_threads, struct mio_obj_id *oid,
 
 	rwl_io_report_init(oid, 2 * nr_threads + 1, block_size, block_count);
 
-	/* Prepare the test object. */	
+	/* Prepare the test object. */
 	rc = rwl_obj_write(oid);
 	if (rc < 0) {
 		fprintf(stderr, "Failed to write to the object: errno = %d\n", rc);
@@ -429,7 +437,7 @@ int main(int argc, char **argv)
 	/* Create the target object if it doesn't exist. */
 	rc = mio_cmd_obj_touch(&rwl_params.cop_oid);
 	if (rc < 0)
-		goto exit;	
+		goto exit;
 
 	rc = mio_rwl_start(rwl_params.cop_nr_threads, &rwl_params.cop_oid,
 			   rwl_params.cop_block_size,

@@ -30,20 +30,29 @@
 
 #define ARRAY_SIZE(a) ((sizeof (a)) / (sizeof (a)[0]))
 
+#define MIO_CLOVIS_OP(op) \
+	((struct m0_clovis_op *)op->mop_drv_op_chain.mdoc_head->mdo_op)
+
 enum {
-	MIO_CLOVIS_MAX_RW_NR_UNITS_PER_OP = 1024 
+	MIO_CLOVIS_RW_MAX_UNITS_PER_OP = 128
 };
 
 extern struct m0_clovis *mio_clovis_instance;
 extern struct m0_clovis_container mio_clovis_container;
 extern struct mio_mero_config *mio_clovis_inst_confs;
 
+extern struct m0_uint128 mio_clovis_obj_md_kvs_id;
+extern struct m0_fid mio_clovis_obj_md_kvs_fid;
+
+extern struct mio_obj_ops mio_clovis_obj_ops;
+extern struct mio_kvs_ops mio_clovis_kvs_ops;
 extern struct mio_comp_obj_ops mio_clovis_comp_obj_ops;
 
 void mio_clovis_driver_register();
 
 /* Helper functions. */
 struct m0_bufvec* mio__clovis_bufvec_alloc(int nr);
+void mio__clovis_bufvec_free(struct m0_bufvec *bv);
 void mio__obj_id_to_uint128(const struct mio_obj_id *oid,
 			    struct m0_uint128 *uint128);
 void mio__uint128_to_obj_id(struct m0_uint128 *uint128,
