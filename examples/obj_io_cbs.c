@@ -121,7 +121,7 @@ void obj_read_cb(struct mio_op *op)
 			op->mop_rc == 0? "succeed" : "failed");
 	}
 	obj_write_data_to_file(
-		args->ica_fp, false, args->ica_bcount, args->ica_iovecs);
+		args->ica_fp, args->ica_bcount, args->ica_iovecs);
 
 	obj_cleanup_iovecs(args->ica_iovecs);
 	free(args);

@@ -73,9 +73,9 @@ static void rwl_threads_usage(FILE *file, char *prog_name)
 "  -o, --object         OID       Starting object ID\n"
 "  -n, --nr_objs        INT       The number of objects\n"
 "  -s, --block-size     INT       block size in bytes or with " \
-				 "suffix b/k/m/g/K/M/G (see --block-count)\n"
+				 "suffix b/k/m/g/K/M/G\n"
 "  -c, --block-count    INT       number of blocks written to an object with "\
-				 "suffix b/k/m/g/K/M/G (see --block-size)\n"
+				 "suffix b/k/m/g/K/M/G\n"
 "  -t, --threads                  Number of threads\n"
 "  -y, --mio_conf                 MIO YAML configuration file\n"
 "  -h, --help                     shows this help text and exit\n"

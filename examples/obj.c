@@ -17,6 +17,8 @@
 #include "obj.h"
 #include "helpers.h"
 
+bool print_on_console = false;
+
 int obj_alloc_iovecs(struct mio_iovec **data, uint32_t bcount,
 		     uint32_t bsize, uint64_t offset, uint64_t max_offset)
 {
@@ -70,8 +72,7 @@ int obj_read_data_from_file(FILE *fp, uint32_t bcount, uint32_t bsize,
 	return i;
 }
 
-int obj_write_data_to_file(FILE *fp, bool console,
-			   uint32_t bcount, struct mio_iovec *data)
+int obj_write_data_to_file(FILE *fp, uint32_t bcount, struct mio_iovec *data)
 {
 	int i = 0;
 	int j;
@@ -88,7 +89,7 @@ int obj_write_data_to_file(FILE *fp, bool console,
 		}
 	}
 
-	if (console) {
+	if (print_on_console) {
 		/* putchar the output */
 		for (i = 0; i < bcount; ++i) {
 			for (j = 0; j < data[i].miov_len; ++j)
@@ -225,6 +226,7 @@ int mio_cmd_obj_args_init(int argc, char **argv,
 				{"block-count", required_argument, NULL, 'c'},
 				{"nr_objs",     required_argument, NULL, 'n'},
 				{"async_mod",   no_argument,       NULL, 'a'},
+				{"console",     no_argument,       NULL, 'p'},
 				{"mio_conf",    required_argument, NULL, 'y'},
 				{"help",        no_argument,       NULL, 'h'},
 				{0,             0,                 0,     0 }};
@@ -235,7 +237,7 @@ int mio_cmd_obj_args_init(int argc, char **argv,
 	params->cop_block_count = ~0ULL;
 	params->cop_async_mode = false;
 
-	while ((v = getopt_long(argc, argv, ":o:s:c:n:y:t:ah", l_opts,
+	while ((v = getopt_long(argc, argv, ":o:s:c:n:y:t:aph", l_opts,
 				&option_index)) != -1)
 	{
 		switch (v) {
@@ -266,6 +268,9 @@ int mio_cmd_obj_args_init(int argc, char **argv,
 			continue;
 		case 'a':
 			params->cop_async_mode = true;
+			continue;
+		case 'p':
+			print_on_console = true;
 			continue;
 		case 'h':
 			usage(stderr, basename(argv[0]));

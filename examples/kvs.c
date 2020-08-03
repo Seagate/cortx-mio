@@ -29,7 +29,7 @@ enum {
 	KVS_MAX_NR_PAIRS_PER_OP = 1024
 };
 
-#define KVS_VAL_STRING  ("Hidden Gnome")
+#define KVS_VAL_STRING  ("MIO KVS demo")
 
 static int kvs_id_sscanf(char *idstr, struct mio_kvs_id *kid)
 {
@@ -177,6 +177,7 @@ static int kvs_create_set(struct mio_kvs_id *kid)
 	int rc;
 	struct mio_op op;
 
+	mio_op_init(&op);
 	rc = mio_kvs_create_set(kid, &op);
 	if (rc != 0)
 		return rc;
@@ -185,6 +186,7 @@ static int kvs_create_set(struct mio_kvs_id *kid)
 	if (rc < 0)
 		fprintf(stderr, "Failed in creating an KVS set!\n");
 
+	mio_op_fini(&op);
 	return rc;
 }
 
@@ -193,6 +195,7 @@ static int kvs_delete_set(struct mio_kvs_id *kid)
 	int rc;
 	struct mio_op op;
 
+	mio_op_init(&op);
 	rc = mio_kvs_del_set(kid, &op);
 	if (rc != 0)
 		return rc;
@@ -201,6 +204,7 @@ static int kvs_delete_set(struct mio_kvs_id *kid)
 	if (rc < 0)
 		fprintf(stderr, "Failed in creating an KVS set!\n");
 
+	mio_op_fini(&op);
 	return rc;
 }
 
@@ -225,6 +229,7 @@ kvs_query_put(struct mio_kvs_id *kid, int start_kno, int nr_kvp, FILE *log)
 	if (log)
 		kvs_print_pairs(pairs, nr_kvp, log);
 
+	mio_op_init(&op);
 	rc = mio_kvs_pair_put(kid, nr_kvp, pairs, rcs, &op);
 	if (rc != 0)
 		return rc;
@@ -232,6 +237,7 @@ kvs_query_put(struct mio_kvs_id *kid, int start_kno, int nr_kvp, FILE *log)
 	rc = mio_cmd_wait_on_op(&op);
 	if (rc < 0)
 		fprintf(stderr, "Failed in inserting kv pairs to aset!\n");
+	mio_op_init(&op);
 
 	kvs_free_pairs(pairs);
 	return rc;
@@ -255,6 +261,7 @@ kvs_query_get(struct mio_kvs_id *kid, int start_kno, int nr_kvp, FILE *log)
 	}
 	kvs_fill_pairs(kid, pairs, start_kno, nr_kvp, false);
 
+	mio_op_init(&op);
 	rc = mio_kvs_pair_get(kid, nr_kvp, pairs, rcs, &op);
 	if (rc != 0)
 		return rc;
@@ -262,6 +269,7 @@ kvs_query_get(struct mio_kvs_id *kid, int start_kno, int nr_kvp, FILE *log)
 	rc = mio_cmd_wait_on_op(&op);
 	if (rc < 0)
 		fprintf(stderr, "Failed in retrieving kv pairs to aset!\n");
+	mio_op_fini(&op);
 
 	if (rc == 0 && log != NULL)
 		kvs_print_pairs(pairs, nr_kvp, log);
@@ -290,6 +298,7 @@ kvs_query_del(struct mio_kvs_id *kid, int start_kno, int nr_kvp, FILE *log)
 	if (log != NULL)
 		kvs_print_pairs(pairs, nr_kvp,log);
 
+	mio_op_init(&op);
 	rc = mio_kvs_pair_del(kid, nr_kvp, pairs, rcs, &op);
 	if (rc != 0)
 		return rc;
@@ -297,6 +306,7 @@ kvs_query_del(struct mio_kvs_id *kid, int start_kno, int nr_kvp, FILE *log)
 	rc = mio_cmd_wait_on_op(&op);
 	if (rc < 0)
 		fprintf(stderr, "Failed in retrieving kv pairs to aset!\n");
+	mio_op_fini(&op);
 
 	kvs_free_pairs(pairs);
 	return rc;

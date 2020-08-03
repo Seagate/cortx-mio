@@ -39,6 +39,8 @@ struct mio_cmd_obj_params {
 	int cop_nr_threads;
 };
 
+extern bool print_on_console;
+
 int mio_cmd_obj_args_init(int argc, char **argv,
 			  struct mio_cmd_obj_params *params,
 			  void (*usage)(FILE *, char *));
@@ -67,8 +69,7 @@ int obj_alloc_iovecs(struct mio_iovec **data, uint32_t bcount,
 void obj_cleanup_iovecs(struct mio_iovec *data);
 int obj_read_data_from_file(FILE *fp, uint32_t bcount, uint32_t bsize,
 			    struct mio_iovec *data);
-int obj_write_data_to_file(FILE *fp, bool console,
-			   uint32_t bcount, struct mio_iovec *data);
+int obj_write_data_to_file(FILE *fp, uint32_t bcount, struct mio_iovec *data);
 
 int obj_open(struct mio_obj_id *oid, struct mio_obj *obj);
 void obj_close(struct mio_obj *obj);
