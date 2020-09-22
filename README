@@ -13,10 +13,16 @@ Uncompress the source code package.
 Run the following steps to build MIO library and examples.
 (1) ./autogen.sh
 (2) ./configure
-    if you install Motr rpms in a customized directory such as your home
-    directory or build Motr from source, run configure like this
+    
+if you install Motr rpms in a customized directory such as your home
+directory or build Motr from source, run configure like this
 
     ./configure --with-libmotr=libmotr_directory --with-motr-headers=motr_headers_directory
+
+if you have Motr source and want to build MIO with the source code, run
+configure as below:
+
+    ./configure --with-motr-src=motr_source_directory
 
 (3) make
 

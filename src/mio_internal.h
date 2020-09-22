@@ -21,6 +21,7 @@ struct mio;
 struct mio_op;
 struct mio_obj_id;
 struct mio_kvs_id;
+struct mio_pool_id;
 struct mio_pool;
 struct mio_obj;
 struct mio_iovec;
@@ -59,7 +60,7 @@ struct mio_op_ops {
 struct mio_obj_ops {
 	int (*moo_open)(struct mio_obj *obj, struct mio_op *op);
 	int (*moo_close)(struct mio_obj *obj);
-	int (*moo_create)(const struct mio_pool *pool_id,
+	int (*moo_create)(const struct mio_pool_id *pool_id,
 			  struct mio_obj *obj, struct mio_op *op);
 	int (*moo_delete)(const struct mio_obj_id *oid, struct mio_op *op);
 
@@ -140,6 +141,14 @@ struct mio_comp_obj_ops {
 };
 
 /**
+ * Driver's pool operations.
+ */
+struct mio_pool_ops {
+	/* Synchronous GET operation. */
+	int (*mpo_get)(const struct mio_pool_id *pool_id, struct mio_pool *pool);
+};
+
+/**
  * MIO defines a generic driver interface to use different object stores
  * as backend. It includes:
  *   - Types of interface driver. Currently only Motr object store is
@@ -179,6 +188,9 @@ struct mio_driver {
 	struct mio_driver_sys_ops *md_sys_ops;
 
 	struct mio_op_ops *md_op_ops;
+
+	/** Pool operations. */
+	struct mio_pool_ops *md_pool_ops;
 
 	/** Object and key-value set operations. */
 	struct mio_obj_ops *md_obj_ops;
@@ -260,6 +272,7 @@ struct mio_driver* mio_driver_get(enum mio_driver_id driver_id);
 /** Register a driver. */
 void mio_driver_register(enum mio_driver_id driver_id,
 			 struct mio_driver_sys_ops *drv_ops,
+			 struct mio_pool_ops *pool_ops,
 			 struct mio_op_ops *op_ops,
 			 struct mio_obj_ops *obj_ops,
 			 struct mio_kvs_ops *kvs_ops,
@@ -274,6 +287,10 @@ void mio_motr_driver_register();
  * mio_motr_config contains configuration parameters to setup an
  * Motr instance.
  */
+enum {
+	MIO_MOTR_MAX_POOL_CNT = 16,
+};
+
 struct mio_motr_config {
 	/** oostore mode is set when 'is_oostore' is TRUE. */
 	bool mc_is_oostore;

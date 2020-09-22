@@ -96,6 +96,7 @@ noinst_PROGRAMS                   += examples/mio_cat
 noinst_PROGRAMS                   += examples/mio_copy 
 noinst_PROGRAMS                   += examples/mio_touch 
 noinst_PROGRAMS                   += examples/mio_unlink 
+noinst_PROGRAMS                   += examples/mio_pool_query
 noinst_PROGRAMS                   += examples/mio_hint_set
 noinst_PROGRAMS                   += examples/mio_hint_stat
 noinst_PROGRAMS                   += examples/mio_kvs_create_set 
@@ -118,6 +119,9 @@ examples_mio_touch_LDADD    = $(top_builddir)/lib/libmio.la
 
 examples_mio_unlink_CPPFLAGS = -DMIO_TARGET='mio_unlink' $(AM_CPPFLAGS)
 examples_mio_unlink_LDADD    = $(top_builddir)/lib/libmio.la
+
+examples_mio_pool_query_CPPFLAGS = -DMIO_TARGET='mio_pool_query' $(AM_CPPFLAGS)
+examples_mio_pool_query_LDADD    = $(top_builddir)/lib/libmio.la
 
 examples_mio_hint_set_CPPFLAGS = -DMIO_TARGET='mio_hint_set' $(AM_CPPFLAGS)
 examples_mio_hint_set_LDADD    = $(top_builddir)/lib/libmio.la

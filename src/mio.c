@@ -228,7 +228,7 @@ void mio_obj_close(struct mio_obj *obj)
 }
 
 int mio_obj_create(const struct mio_obj_id *oid,
-                   const struct mio_pool *pool_id,
+                   const struct mio_pool_id *pool_id,
                    struct mio_obj *obj, struct mio_op *op)
 {
 	int rc;
@@ -564,6 +564,117 @@ mio_composite_obj_get_extents(struct mio_obj *obj,
 	return rc;
 }
 
+/* --------------------------------------------------------------- *
+ *                           MIO pool                              *
+ * ----------------------------------------------------------------*/
+
+static struct mio_pool* mio_pool_lookup(const struct mio_pool_id *pool_id)
+{
+	int i;
+	struct mio_pool *pool = NULL;
+
+	for (i = 0; i < mio_pools.mps_nr_pools; i++) {
+		pool = mio_pools.mps_pools + i;
+		if (pool->mp_id.mpi_hi == pool_id->mpi_hi &&
+		    pool->mp_id.mpi_lo == pool_id->mpi_lo)
+			break;
+	}
+
+	if (i == mio_pools.mps_nr_pools)
+		return NULL;
+	else
+		return pool;
+}
+
+int mio_pool_get(const struct mio_pool_id *pool_id, struct mio_pool **pool)
+{
+	int rc = 0;
+	struct mio_pool *out_pool = NULL;
+	struct mio_pool *found_pool = NULL;
+
+	if (pool_id == NULL) {
+		mio_log(MIO_ERROR, "Pool id is not set!");
+		return -EINVAL;
+	}
+	if (pool == NULL) {
+		mio_log(MIO_ERROR, "Memory for returned pool is NULL!\n");
+		return -EINVAL;
+	}
+	*pool = NULL;
+
+	rc = mio_instance_check();
+	if (rc < 0)
+		return rc;
+
+	found_pool = mio_pool_lookup(pool_id);
+	if (found_pool == NULL)
+		return -EINVAL;
+
+	out_pool = mio_mem_alloc(sizeof *out_pool);
+	if (out_pool == NULL)
+		return -ENOMEM;
+	
+	/* Update pool information from driver. */
+	rc = mio_instance->m_driver->md_pool_ops->mpo_get(pool_id, found_pool);
+	if (rc != 0) {
+		mio_mem_free(out_pool);
+		return rc;
+	}
+
+	/* Copy to the out_pool. */
+	mio_mem_copy(out_pool, found_pool, sizeof(*found_pool));
+	*pool = out_pool;
+	return 0;
+
+}
+
+int mio_pool_get_all(struct mio_pools **pools)
+{
+	int i;
+	int rc = 0;
+	struct mio_pool *pool;
+	struct mio_pools *out_pools;
+
+	if (pools == NULL) {
+		mio_log(MIO_ERROR, "Memory for returned pools is NULL!\n");
+		return -EINVAL;
+
+	}
+
+	rc = mio_instance_check();
+	if (rc < 0)
+		return rc;
+
+	out_pools = mio_mem_alloc(sizeof(struct mio_pools));
+	if (out_pools == NULL)
+		return -ENOMEM;
+	out_pools->mps_pools =
+		mio_mem_alloc(mio_pools.mps_nr_pools * sizeof(struct mio_pool));
+	if (out_pools->mps_pools == NULL) {
+		mio_mem_free(out_pools);
+		return -ENOMEM;
+	}
+
+	for (i = 0; i < mio_pools.mps_nr_pools; i++) {
+		pool = mio_pools.mps_pools + i;
+		rc = mio_instance->m_driver->md_pool_ops->mpo_get(
+			&pool->mp_id, pool);
+		if (rc < 0)
+			break;
+
+		mio_mem_copy(out_pools->mps_pools + i, pool, sizeof *pool);
+	}
+	if (rc < 0) {
+		mio_mem_free(out_pools->mps_pools);
+		mio_mem_free(out_pools);
+		*pools = NULL;
+	} else {
+		out_pools->mps_nr_pools = mio_pools.mps_nr_pools;
+		*pools = out_pools;
+	}
+
+	return rc;
+}
 
 /* --------------------------------------------------------------- *
  *                    MIO initialisation/finalisation              *

@@ -217,9 +217,9 @@ struct mio_kvs_id {
 	uint8_t mki_bytes[MIO_KVS_ID_LEN];
 };
 
-struct mio_pool {
-	uint64_t mp_hi;
-	uint64_t mp_lo;
+struct mio_pool_id {
+	uint64_t mpi_hi;
+	uint64_t mpi_lo;
 };
 
 /**
@@ -273,6 +273,94 @@ struct mio_obj {
 	void *mo_drv_obj_lock;
 };
 
+enum mio_pool_type {
+	MIO_POOL_TYPE_NVM = 0,
+	MIO_POOL_TYPE_SSD,
+	MIO_POOL_TYPE_HDD
+};
+
+enum {
+	MIO_POOL_MAX_NAME_LEN = 32,
+	MIO_POOL_MAX_NR_OPT_BLKSIZES = 16
+};
+
+/**
+ * Descriptor of a MIO pool.
+ */
+struct mio_pool {
+	/** the name by which this layer is referenced by the user */
+	char mp_name[MIO_POOL_MAX_NAME_LEN];
+	
+	/** Pool id. */
+ 	struct mio_pool_id mp_id;
+
+	enum mio_pool_type mp_type;
+
+        /* Characteristics of the pool. */
+        /** Capacity of the layer (not necessarily constant or current) */
+        size_t mp_capacity;
+
+        /*
+	 * Note that the 'available space' is not a slot here, because that
+         * would imply that MIO needs to update it frequently. Instead, the
+         * free space is inquired by passing the pool id  to a separate
+         * mio_pool_freespace() function.
+         */
+
+        /** Optimised data buffer alignment */
+        size_t mp_opt_alignment;
+
+        /**
+	 * Preferred block sizes for read and write operations, ordered in
+         * decreasing order of performance. These parameters are initialised
+         * using driver specific experiential `formula`, and could be
+         * updated by monitoring telemetry data.
+         */
+        size_t mp_nr_opt_blksizes;
+        size_t mp_opt_blksizes[MIO_POOL_MAX_NR_OPT_BLKSIZES];
+};
+
+/**
+ * MIO pool information structure.
+ */
+struct mio_pools {
+        int mps_nr_pools;
+        struct mio_pool *mps_pools;
+};
+
+extern struct mio_pools mio_pools;
+
+/**
+ * Return the available space in pool @arg pool_id.
+ *
+ * Returns a (reasonable approximation to) the free capacity of the given
+ * pool in @arg *freespace.
+ *
+ */
+int mio_pool_freespace(const struct mio_pool_id *pool_id,
+		       size_t *freespace);
+
+/**
+ *  Return information about a requested pool or all MIO pools.
+ * 
+ * This function can only be called after mio_init() returned successfully.
+ * User code is not permitted to modify the content of the @arg config
+ * result.
+ * 
+ * @arg *pool_id The pool id.
+ * @arg *pools will not be NULL on a successful return. If no
+ * pools are configured, this will be visible inside the configinfo
+ * structure itself.
+ *
+ * @arg pools may not be NULL on call.
+ *
+ * @param[out] pool The requested pool.
+ * @param[out] pools The list of all pools.
+ * @return 0 for success
+ */
+int mio_pool_get(const struct mio_pool_id *pool_id, struct mio_pool **pool);
+int mio_pool_get_all(struct mio_pools **pools);
+
 /**
  * Open an object identified by object identifier oid.
  * Upon successful completion mio_obj_open() return a ‘obj’
@@ -315,7 +403,7 @@ void mio_obj_close(struct mio_obj *obj);
  * Should MIO expose pools to applications?
  */
 int mio_obj_create(const struct mio_obj_id *oid,
-                   const struct mio_pool *pool_id,
+                   const struct mio_pool_id *pool_id,
                    struct mio_obj *obj, struct mio_op *op);
 
 /**

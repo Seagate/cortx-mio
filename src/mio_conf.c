@@ -53,6 +53,10 @@ enum conf_key {
 	MOTR_MAX_RPC_MSG_SIZE,
 	MOTR_DEFAULT_UNIT_SIZE,
 	MOTR_USER_GROUP,
+	MOTR_POOLS,
+	MOTR_POOL_NAME,
+	MOTR_POOL_ID,
+	MOTR_POOL_TYPE,
 
 	/* Other drivers such as Ceph defined here. */
 };
@@ -136,12 +140,33 @@ struct conf_entry conf_table[] = {
 		.name = "MOTR_USER_GROUP",
 		.type = MOTR
 	},
-
+	[MOTR_POOLS] = {
+		.name = "MOTR_POOLS",
+		.type = MOTR
+	},
+	[MOTR_POOL_NAME] = {
+		.name = "MOTR_POOL_NAME",
+		.type = MOTR
+	},
+	[MOTR_POOL_ID] = {
+		.name = "MOTR_POOL_ID",
+		.type = MOTR
+	},
+	[MOTR_POOL_TYPE] = {
+		.name = "MOTR_POOL_TYPE",
+		.type = MOTR
+	},
 };
+
+enum conf_block_sequence {
+	CONF_BLK_SEQ_MOTR_POOLS = 1
+};
+static enum conf_block_sequence conf_which_blk_seq = 0;
 
 static enum mio_driver_id mio_inst_drv_id;
 static void *mio_driver_confs[MIO_DRIVER_NUM];
 static struct mio_motr_config *motr_conf;
+struct mio_pools mio_pools;
 
 #define NKEYS (sizeof(conf_table)/sizeof(struct conf_entry))
 
@@ -244,6 +269,101 @@ static void conf_free_drivers()
 	}
 }
 
+static int conf_alloc_mio_pools()
+{
+	mio_memset(&mio_pools, 0, sizeof(mio_pools));
+	mio_pools.mps_pools = mio_mem_alloc(
+		MIO_MOTR_MAX_POOL_CNT * sizeof(struct mio_pool));
+	if (mio_pools.mps_pools == NULL)
+		return -ENOMEM;
+	else
+		return 0;
+}
+
+static void conf_free_mio_pools()
+{
+	mio_mem_free(mio_pools.mps_pools);
+	mio_memset(&mio_pools, 0, sizeof(mio_pools));
+}
+
+static int conf_pool_id_sscanf(struct mio_pool_id *pool_id, char *id_str)
+{
+	int rc;
+	int n;
+	uint64_t u1;
+	uint64_t u2;
+
+	rc = sscanf(id_str, "%"SCNx64" : %"SCNx64" %n", &u1, &u2, &n);
+	if (rc < 0)
+		return rc;
+
+	pool_id->mpi_hi = u1;
+	pool_id->mpi_lo = u2;
+	return 0;
+}
+
+static int conf_extract_pool_type(enum mio_pool_type *ptype, char *type_str)
+{
+	if (type_str == NULL) {
+		fprintf(stderr, "Pool type is not set!\n");
+		return -EINVAL;
+	}
+
+	if (!strcmp(type_str, "NVM"))
+		*ptype = MIO_POOL_TYPE_NVM;
+	else if (!strcmp(type_str, "SSD"))
+		*ptype = MIO_POOL_TYPE_SSD;
+	else if (!strcmp(type_str, "HDD"))
+		*ptype = MIO_POOL_TYPE_HDD;
+	else {
+		fprintf(stderr, "Unknown pool type!\n");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int conf_start_block()
+{
+	int rc = 0;
+	struct mio_pool *pool;
+
+	/* Process one block inside an array(seq) block. */
+	switch(conf_which_blk_seq) {
+	case CONF_BLK_SEQ_MOTR_POOLS:
+		if (mio_pools.mps_nr_pools + 1 == MIO_MOTR_MAX_POOL_CNT) {
+			fprintf(stderr, "Too many pools!\n");
+			rc = -E2BIG;
+		} else {
+			pool = mio_pools.mps_pools + mio_pools.mps_nr_pools;
+			mio_memset(pool, 0, sizeof(*pool));
+			mio_pools.mps_nr_pools++;
+		}
+		break;
+	default:
+		/* Ignore the block. */
+		break;
+	}
+
+	return rc;
+}
+
+static int conf_extract_blk_seq(enum conf_key key)
+{
+	int rc = 0;
+
+	switch (key) {
+	case MOTR_POOLS:
+		conf_which_blk_seq = CONF_BLK_SEQ_MOTR_POOLS;
+		rc = conf_alloc_mio_pools();
+		break;
+	default:
+		break;
+	}
+
+	return rc;
+}
+
 static int conf_extract_key(enum conf_key *key, char *token)
 {
 	int rc;
@@ -264,6 +384,7 @@ static int conf_extract_key(enum conf_key *key, char *token)
 static int conf_extract_value(enum conf_key key, char *value)
 {
 	int rc = 0;
+	struct mio_pool *pool;
 
 	/* Extract configuration value. */
 	switch(key) {
@@ -313,6 +434,18 @@ static int conf_extract_value(enum conf_key key, char *value)
 		break;
 	case MOTR_USER_GROUP:
 		rc = conf_copy_str(&motr_conf->mc_motr_group, value);
+		break;
+	case MOTR_POOL_NAME:
+		pool = mio_pools.mps_pools + mio_pools.mps_nr_pools - 1;
+		strncpy(pool->mp_name, value, MIO_POOL_MAX_NAME_LEN);
+		break;
+	case MOTR_POOL_ID:
+		pool = mio_pools.mps_pools + mio_pools.mps_nr_pools - 1;
+		rc = conf_pool_id_sscanf(&pool->mp_id, value);
+		break;
+	case MOTR_POOL_TYPE:
+		pool = mio_pools.mps_pools + mio_pools.mps_nr_pools - 1;
+		rc = conf_extract_pool_type(&pool->mp_type, value);
 		break;
 	default:
 		break;
@@ -366,6 +499,16 @@ int mio_conf_init(const char *config_file)
 			else
 				rc = conf_extract_value(key, scalar_value);
 			break;
+		case YAML_BLOCK_MAPPING_START_TOKEN:
+			break;
+		case YAML_BLOCK_SEQUENCE_START_TOKEN:
+			rc = conf_extract_blk_seq(key);
+			break;
+		case YAML_BLOCK_ENTRY_TOKEN:
+			rc = conf_start_block();
+			break;
+		case YAML_BLOCK_END_TOKEN:
+			break;
 		case YAML_STREAM_END_TOKEN:
 			eof = true;
 			break;
@@ -396,6 +539,7 @@ exit:
 
 void mio_conf_fini()
 {
+	conf_free_mio_pools();
 	conf_free_drivers();
 }
 

@@ -391,10 +391,77 @@ static struct mio_op_ops mio_motr_op_ops = {
 	.mopo_set_cbs = mio_motr_op_set_cbs
 };
 
+static int
+mio_motr_pool_get(const struct mio_pool_id *pool_id, struct mio_pool *pool)
+{
+       int rc;
+       int i;
+       int nr_opt_blksizes;
+       unsigned long blksize;
+       unsigned long unit_size;
+       unsigned long grp_size;
+       unsigned long max_blksize;
+       unsigned long opt_blksize_incr;
+       unsigned lid;
+       struct m0_fid pool_fid;
+       struct m0_reqh *reqh = &mio_motr_instance->m0c_reqh;
+       struct m0_pool_version *pver;
+       struct m0_pdclust_attr *pa;
+
+       if (pool_id == NULL || pool == NULL)
+               return -EINVAL;
+
+       mio__motr_pool_id_to_fid(pool_id, &pool_fid);
+       rc = m0_pool_version_get(reqh->rh_pools, &pool_fid, &pver);
+       if (rc != 0) {
+               mio_log(MIO_ERROR,
+                       "m0_pool_version_get(%"PRIx64":%"PRIx64") failed: %d",
+                       pool_fid.f_container, pool_fid.f_key, rc);
+               return rc;
+       }
+
+       lid = m0_client_layout_id(mio_motr_instance);
+       /* The unit size returned is power of 2. */
+       unit_size = m0_obj_layout_id_to_unit_size(lid);
+       pa = &pver->pv_attr;
+       grp_size = unit_size * pa->pa_N;
+       /* max 2-times pool-width deep, otherwise we may get -E2BIG */
+       max_blksize =
+               unit_size * 2 * pa->pa_P * pa->pa_N / (pa->pa_N + 2 * pa->pa_K);
+       max_blksize = 
+               ((max_blksize + grp_size - 1) / grp_size) * grp_size;
+
+       mio_log(MIO_DEBUG, "unit_size=%lu (N,K,P)=(%u,%u,%u) max_blksize=%lu\n",
+           unit_size, pa->pa_N, pa->pa_K, pa->pa_P, max_blksize);
+
+       /*
+        * Calculate optimised buffer block size for READ/WRITE. It is rounded
+        * up to be multiple of group size.
+        */
+       nr_opt_blksizes = max_blksize / grp_size > MIO_POOL_MAX_NR_OPT_BLKSIZES?
+                         MIO_POOL_MAX_NR_OPT_BLKSIZES :
+                         max_blksize / grp_size;
+       opt_blksize_incr = max_blksize / nr_opt_blksizes;
+       opt_blksize_incr = 
+               ((opt_blksize_incr + grp_size - 1) / grp_size) * grp_size;
+
+       for (i = 0, blksize = opt_blksize_incr;
+            blksize < max_blksize; blksize += opt_blksize_incr)
+               pool->mp_opt_blksizes[i++] = blksize;
+       pool->mp_nr_opt_blksizes = i;
+       pool->mp_opt_alignment = 4096;
+
+       return 0;
+}
+
+static struct mio_pool_ops mio_motr_pool_ops = {
+       .mpo_get    = mio_motr_pool_get
+};
+
 void mio_motr_driver_register()
 {
 	mio_driver_register(
-		MIO_MOTR, &mio_motr_sys_ops,
+		MIO_MOTR, &mio_motr_sys_ops, &mio_motr_pool_ops,
 		&mio_motr_op_ops, &mio_motr_obj_ops,
 		&mio_motr_kvs_ops, &mio_motr_comp_obj_ops);
 }

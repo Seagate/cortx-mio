@@ -57,6 +57,8 @@ void mio__obj_id_to_uint128(const struct mio_obj_id *oid,
 			    struct m0_uint128 *uint128);
 void mio__uint128_to_obj_id(struct m0_uint128 *uint128,
 			    struct mio_obj_id *oid);
+void mio__motr_pool_id_to_fid(const struct mio_pool_id *pool_id,
+				struct m0_fid *fid);
 #endif
 
 /*

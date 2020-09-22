@@ -85,6 +85,7 @@ struct mio_driver* mio_driver_get(enum mio_driver_id driver_id)
 
 void mio_driver_register(enum mio_driver_id driver_id,
 			 struct mio_driver_sys_ops *sys_ops,
+			 struct mio_pool_ops *pool_ops,
 			 struct mio_op_ops *op_ops,
 			 struct mio_obj_ops *obj_ops,
 			 struct mio_kvs_ops *kvs_ops,
@@ -94,6 +95,7 @@ void mio_driver_register(enum mio_driver_id driver_id,
 
 	drv = mio_drivers + driver_id;
 	drv->md_sys_ops = sys_ops;
+	drv->md_pool_ops = pool_ops;
 	drv->md_op_ops = op_ops;
 	drv->md_obj_ops = obj_ops;
 	drv->md_kvs_ops = kvs_ops;
