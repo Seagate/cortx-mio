@@ -112,6 +112,12 @@ static int mio_motr_obj_close(struct mio_obj *obj)
 
 	if (!obj->mo_attrs_updated)
 		goto obj_fini;
+#if 0
+	mio_log(MIO_DEBUG,
+		"[mio_motr_obj_close] rcount = %lu, wcount = %lu\n",
+		obj->mo_attrs.moa_stats.mos_rcount,
+		obj->mo_attrs.moa_stats.mos_wcount);
+#endif
 
 	/* Update object attributes to metada key-value store. */
 	mio_memset(&mop, 0, sizeof mop);

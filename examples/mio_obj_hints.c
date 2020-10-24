@@ -70,7 +70,7 @@ static int obj_hint_stat(struct mio_obj_id *oid, int hkey)
 	rc = mio_obj_hint_get(&obj, hkey, &hvalue);
 	if (rc < 0)
 		fprintf(stderr, "Can't get %s's value, rc = %d\n",
-			mio_hint_name(hkey), rc);
+			mio_hint_name(MIO_HINT_SCOPE_OBJ, hkey), rc);
 	
 	mio_cmd_obj_close(&obj);
 	return rc;
@@ -99,7 +99,7 @@ create:
 	rc = mio_hint_add(&hints, hkey, hvalue);
 	if (rc < 0) {
 		fprintf(stderr, "Failed to set hint %s\n",
-			mio_hint_name(hkey));
+			mio_hint_name(MIO_HINT_SCOPE_OBJ, hkey));
 		return rc;
 	}
 

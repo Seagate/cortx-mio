@@ -108,6 +108,7 @@ noinst_PROGRAMS                   += examples/mio_kvs_del_pairs
 noinst_PROGRAMS                   += examples/mio_comp_obj_example 
 noinst_PROGRAMS                   += examples/mio_rw_threads 
 noinst_PROGRAMS                   += examples/mio_rw_lock 
+noinst_PROGRAMS                   += examples/mio_hsm 
 
 examples_mio_cat_CPPFLAGS = -DMIO_TARGET='mio_cat' $(AM_CPPFLAGS)
 examples_mio_cat_LDADD    = $(top_builddir)/lib/libmio.la
@@ -156,6 +157,9 @@ examples_mio_rw_threads_LDADD    = $(top_builddir)/lib/libmio.la -lpthread -lcry
 
 examples_mio_rw_lock_CPPFLAGS = -DMIO_TARGET='mio_rw_lock' $(AM_CPPFLAGS)
 examples_mio_rw_lock_LDADD    = $(top_builddir)/lib/libmio.la -lpthread -lcrypto -lssl
+
+examples_mio_hsm_CPPFLAGS = -DMIO_TARGET='mio_hsm' $(AM_CPPFLAGS)
+examples_mio_hsm_LDADD    = $(top_builddir)/lib/libmio.la -lreadline
 
 include $(top_srcdir)/examples/Makefile.sub
 
