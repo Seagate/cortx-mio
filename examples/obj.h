@@ -76,6 +76,7 @@ int obj_write_data_to_file(FILE *fp, uint32_t bcount, struct mio_iovec *data);
 int obj_open(struct mio_obj_id *oid, struct mio_obj *obj);
 void obj_close(struct mio_obj *obj);
 int obj_create(struct mio_obj_id *oid, struct mio_obj *obj);
+int obj_open_or_create(struct mio_obj_id *oid, struct mio_obj *obj);
 int obj_rm(struct mio_obj_id *oid);
 
 int obj_write(struct mio_obj *obj, uint32_t bcount, struct mio_iovec *data);

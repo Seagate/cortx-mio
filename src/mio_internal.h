@@ -26,6 +26,7 @@ struct mio_pool;
 struct mio_obj;
 struct mio_iovec;
 struct mio_kv_pair;
+struct mio_hints;
 struct mio_thread;
 
 enum mio_obj_opcode;
@@ -34,6 +35,21 @@ struct mio_comp_obj_layer;
 struct mio_comp_obj_layout;
 
 struct mio_driver_op;
+
+/**
+ * Statistics on object accesses.
+ */
+struct mio_obj_stats {
+	/* Number of READ. */
+	uint64_t mos_rcount;
+	uint64_t mos_rbytes;
+	uint64_t mos_rtime;
+
+	/* Number of WRITE. */
+	uint64_t mos_wcount;
+	uint64_t mos_wbytes;
+	uint64_t mos_wtime;
+};
 
 /**
  * MIO defines sets of operations a driver must implemnt:
@@ -349,11 +365,14 @@ struct mio_hint_map {
 enum {
 	MIO_OBJ_HINT_NUM = 32
 };
+
 int mio_hint_map_init(struct mio_hint_map *map, int nr_entries);
 void mio_hint_map_fini(struct mio_hint_map *map);
 int mio_hint_map_copy(struct mio_hint_map *, struct mio_hint_map *from);
 int mio_hint_map_set(struct mio_hint_map *map, int key, uint64_t value);
 int mio_hint_map_get(struct mio_hint_map *map, int key, uint64_t *value);
+
+bool mio_hint_is_set(struct mio_hints *hints, int hint_key);
 
 void *mio_mem_alloc(size_t size);
 void mio_mem_free(void *p);

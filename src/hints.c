@@ -36,6 +36,10 @@ static struct hint hint_table[] = {
 	[MIO_HINT_OBJ_WHERE] = {
 		.h_name = "MIO_HINT_OBJ_WHERE",
 		.h_type = MIO_HINT_SESSION,
+	},
+	[MIO_HINT_OBJ_HOT_INDEX] = {
+		.h_name = "MIO_HINT_OBJ_HOT_INDEX",
+		.h_type = MIO_HINT_PERSISTENT,
 	}
 };
 
@@ -187,7 +191,7 @@ void mio_hints_fini(struct mio_hints *hints)
 }
 
 #define drv_obj_ops (mio_instance->m_driver->md_obj_ops)
-static int mio_obj_hint_store(struct mio_obj *obj)
+static int obj_hint_store(struct mio_obj *obj)
 {
 	int i;
 	int rc;
@@ -227,11 +231,45 @@ static int mio_obj_hint_store(struct mio_obj *obj)
 	return drv_obj_ops->moo_hint_store(obj);
 }
 
-static int mio_obj_hint_load(struct mio_obj *obj)
+static int obj_hint_load(struct mio_obj *obj)
 {
 	if (obj == NULL)
 		return -EINVAL;
 	return drv_obj_ops->moo_hint_load(obj);
+}
+
+static int obj_hot_index_cal(struct mio_obj *obj)
+{
+	int rc;
+	uint64_t hotness;
+
+	/*
+	 * A simple algorithm which only considers the number of accesses
+	 * to an object. (Proof of Concept only)
+	 *
+	 * More sophisticated algorithm taking account of object aging
+	 * and other factors (such as data location etc.) will be
+	 * designed later.
+	 */
+	hotness = (obj->mo_attrs.moa_stats.mos_rcount +
+		   obj->mo_attrs.moa_stats.mos_wcount);
+	rc = mio_hint_map_set(&obj->mo_hints.mh_map, MIO_HINT_OBJ_HOT_INDEX, hotness);
+	return rc;
+}
+
+static int obj_dyn_hint_update(struct mio_obj *obj, int hint_key)
+{
+	int rc = 0;
+
+	switch(hint_key) {
+	case MIO_HINT_OBJ_HOT_INDEX:
+		rc = obj_hot_index_cal(obj);
+		break;
+	default:
+		break;
+	}
+
+	return rc;
 }
 
 static int mio_obj_hint_ops_check()
@@ -250,48 +288,6 @@ static int mio_obj_hint_ops_check()
 	return 0;
 }
 
-int mio_obj_hints_set(struct mio_obj *obj, struct mio_hints *hints)
-{
-	int rc;
-
-	rc = mio_obj_hint_ops_check();
-	if (rc < 0)
-		return rc;
-	if (obj == NULL || hints == NULL)
-		return -EINVAL;
-
-	rc = mio_hint_map_copy(&obj->mo_hints.mh_map, &hints->mh_map)? :
-	     mio_obj_hint_store(obj);
-	if (rc < 0) {
-		mio_log(MIO_ERROR,
-			"Copying and store hints failed! error = %d\n", rc);
-		return rc;
-	}
-
-	return 0;
-}
-
-int mio_obj_hints_get(struct mio_obj *obj, struct mio_hints *hints)
-{
-	int rc;
-
-	rc = mio_obj_hint_ops_check();
-	if (rc < 0)
-		return rc;
-	if (obj == NULL || hints == NULL)
-		return -EINVAL;
-
-	rc = mio_obj_hint_load(obj);
-	if (rc < 0)
-		return rc;
-
-	rc = mio_hint_map_copy(&hints->mh_map, &obj->mo_hints.mh_map);
-	return rc;
-}
-
-/**
- * Helper functions to set or get individual hint.
- */
 int mio_hint_add(struct mio_hints *hints,
 		 int hint_key, uint64_t hint_value)
 {
@@ -312,6 +308,112 @@ int mio_hint_lookup(struct mio_hints *hints,
 	if (hints == NULL)
 		return -EINVAL;
 	rc = mio_hint_map_get(&hints->mh_map, hint_key, hint_value);
+	return rc;
+}
+
+bool mio_hint_is_set(struct mio_hints *hints, int hint_key)
+{
+	int rc;
+	uint64_t hint_value;
+
+	if (hints == NULL)
+		return false;
+
+	rc = mio_hint_lookup(hints, hint_key, &hint_value);
+	if (rc < 0)
+		return false;
+	if (hint_value == MIO_HINT_VALUE_NULL)
+		return false;
+
+	return true;
+}
+
+/**
+ * MIO hint API to set and get all hints of an object.
+ */
+int mio_obj_hints_set(struct mio_obj *obj, struct mio_hints *hints)
+{
+	int rc;
+
+	rc = mio_obj_hint_ops_check();
+	if (rc < 0)
+		return rc;
+	if (obj == NULL || hints == NULL)
+		return -EINVAL;
+
+	rc = mio_hint_map_copy(&obj->mo_hints.mh_map, &hints->mh_map)? :
+	     obj_hint_store(obj);
+	if (rc < 0) {
+		mio_log(MIO_ERROR,
+			"Copying and store hints failed! error = %d\n", rc);
+		return rc;
+	}
+
+	return 0;
+}
+
+int mio_obj_hints_get(struct mio_obj *obj, struct mio_hints *hints)
+{
+	int rc;
+
+	rc = mio_obj_hint_ops_check();
+	if (rc < 0)
+		return rc;
+	if (obj == NULL || hints == NULL)
+		return -EINVAL;
+
+	rc = obj_hint_load(obj);
+	if (rc < 0)
+		return rc;
+
+	rc = mio_hint_map_copy(&hints->mh_map, &obj->mo_hints.mh_map);
+	return rc;
+}
+
+/**
+ * MIO hint API to set and get one single hint of an object.
+ */
+int mio_obj_hint_set(struct mio_obj *obj, int hint_key, uint64_t hint_value)
+{
+	int rc;
+
+	rc = mio_obj_hint_ops_check();
+	if (rc < 0)
+		return rc;
+	if (obj == NULL)
+		return -EINVAL;
+
+	rc = mio_hint_add(&obj->mo_hints, hint_key, hint_value)? :
+	     obj_hint_store(obj);
+	if (rc < 0) {
+		mio_log(MIO_ERROR,
+			"Copying and store hints failed! error = %d\n", rc);
+		return rc;
+	}
+
+	return 0;
+}
+
+int mio_obj_hint_get(struct mio_obj *obj, int hint_key, uint64_t *hint_value)
+{
+	int rc;
+
+	rc = mio_obj_hint_ops_check();
+	if (rc < 0)
+		return rc;
+	if (obj == NULL)
+		return -EINVAL;
+
+	rc = obj_hint_load(obj);
+	if (rc < 0)
+		return rc;
+
+	/* Dynamic hint's value is calculated when it's queried. */
+	rc = obj_dyn_hint_update(obj, hint_key);
+	if (rc < 0)
+		return rc;
+
+	rc = mio_hint_lookup(&obj->mo_hints, hint_key, hint_value);
 	return rc;
 }
 

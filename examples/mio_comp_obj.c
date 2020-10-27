@@ -303,7 +303,7 @@ static int comp_obj_create(struct mio_obj_id *oid, struct mio_obj *obj)
 
 step_1:
 	memset(&op, 0, sizeof op);
-	rc = mio_obj_create(oid, NULL, obj, &op)? :
+	rc = mio_obj_create(oid, NULL, NULL, obj, &op)? :
 	     mio_cmd_wait_on_op(&op);
 	if (rc < 0)
 		return rc;

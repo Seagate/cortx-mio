@@ -190,7 +190,12 @@ enum mio_hint_key {
 	MIO_HINT_OBJ_CACHE_FLUSH_SIZE,
 	MIO_HINT_OBJ_LIFETIME,
 	MIO_HINT_OBJ_WHERE,
+	MIO_HINT_OBJ_HOT_INDEX,
 	MIO_HINT_KEY_NUM
+};
+
+enum mio_hint_value {
+	MIO_HINT_VALUE_NULL
 };
 
 /**
@@ -222,6 +227,14 @@ struct mio_pool_id {
 	uint64_t mpi_lo;
 };
 
+/** Some marcos for pools. */
+enum {
+	MIO_POOL_ID_AUTO = 0x0,
+	MIO_POOL_GOLD   = 0x100,
+	MIO_POOL_SILVER = 0x101,
+	MIO_POOL_BRONZE  = 0x102
+};
+
 /**
  * mio_iovec specifies the base address and length of an area in memory
  * from/to which data should be written. It also specifies byte range of
@@ -242,7 +255,12 @@ enum {
  */
 struct mio_obj_attrs {
 	uint64_t moa_size;
-	uint64_t moa_wtime;
+
+	/**
+	 * Object access statistics. MIO shows one usage of
+	 * this information to calculate object hotness.
+	 */
+	struct mio_obj_stats moa_stats;
 
 	/* Persistent hints only. */
 	struct mio_hints moa_phints;
@@ -264,6 +282,8 @@ struct mio_obj {
 	/** Associated metadata key-vaule set. */
 	struct mio_kvs *mo_md_kvs;
 
+	/** If the object's attributes have been updated. */
+	bool mo_attrs_updated;
 	struct mio_obj_attrs mo_attrs;
 
 	/** Pointer to driver specific object structure. */
@@ -389,10 +409,20 @@ void mio_obj_close(struct mio_obj *obj);
  * Note that an internal key-value set will be created when
  * creating an object, offering a convenient mechanism
  * for applications to store and query customized object attributes.
-
+ *
+ * `pool_id` and `hints` together decide which pool to store the object.
+ * When `pool_id` isn't NULL, the object will be created in the explicitly
+ * specified pool. When `pool_id` is set to NULL, the pool is chosen
+ * according to the `hints`. MIO currently offers 2 kinds of hints for
+ * pool selection. {MIO_HINT_OBJ_WHERE, MIO_POOL_GOLD|SILVER|BRONZE}
+ * allows users choose a pool according to performance requirement.
+ * {MIO_HINT_OBJ_HOT_INDEX, hotname} gives MIO information on how
+ * frequent the object will be accessed and MIO then decides which
+ * pool to store the object. See example in examples/mio_hsm.c.
  *
  * @param oid The object identifier.
  * @param pool_id The pool where the object is stored to.
+ * @param hints Hints about which pool to store the object.
  * @param[out] obj Pointer to the object handle which can be
  * used can be subsequently used to access the object until
  * the object is closed. Note that the object handle must be
@@ -403,7 +433,7 @@ void mio_obj_close(struct mio_obj *obj);
  * Should MIO expose pools to applications?
  */
 int mio_obj_create(const struct mio_obj_id *oid,
-                   const struct mio_pool_id *pool_id,
+                   const struct mio_pool_id *pool_id, struct mio_hints *hints,
                    struct mio_obj *obj, struct mio_op *op);
 
 /**
@@ -581,6 +611,9 @@ int mio_kvs_del_set(struct mio_kvs_id *kvs_id, struct mio_op *op);
  */
 int mio_obj_hints_set(struct mio_obj *obj, struct mio_hints *hints);
 int mio_obj_hints_get(struct mio_obj *obj, struct mio_hints *hints);
+
+int mio_obj_hint_set(struct mio_obj *obj, int hint_key, uint64_t hint_value);
+int mio_obj_hint_get(struct mio_obj *obj, int hint_key, uint64_t *hint_value);
 
 /**
  * Helper functions to set or get individual hint.

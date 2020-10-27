@@ -89,7 +89,7 @@ int mio_cmd_obj_write(char *src, struct mio_obj_id *oid,
 
 	/* Create the target object if it doesn't exist. */
 	memset(&obj, 0, sizeof obj);
-	rc = obj_create(oid, &obj);
+	rc = obj_open_or_create(oid, &obj);
 	if (rc < 0)
 		goto src_close;
 

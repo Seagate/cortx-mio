@@ -227,15 +227,80 @@ void mio_obj_close(struct mio_obj *obj)
 		obj->mo_drv_obj_ops->moo_close(obj);
 }
 
+enum {
+	MIO_OBJ_COLD = 10,
+	MIO_OBJ_WARM = 100,
+	MIO_OBJ_HOT  = 1000
+};
+
+static int obj_pool_select(struct mio_hints *hints, struct mio_pool_id *which)
+{
+	int rc = 0;
+	uint64_t hint_value;
+	uint64_t hotness;
+
+	which->mpi_hi = 0x0;
+	which->mpi_lo = 0x0;
+	if (mio_hint_is_set(hints, MIO_HINT_OBJ_WHERE)) {
+		mio_hint_lookup(hints, MIO_HINT_OBJ_WHERE, &hint_value);
+		if (hint_value == MIO_POOL_GOLD) {
+			which->mpi_hi = mio_pools.mps_pools[0].mp_id.mpi_hi;
+			which->mpi_lo = mio_pools.mps_pools[0].mp_id.mpi_lo;
+		} else if (hint_value == MIO_POOL_SILVER) {
+			which->mpi_hi = mio_pools.mps_pools[0].mp_id.mpi_hi;
+			which->mpi_lo = mio_pools.mps_pools[0].mp_id.mpi_lo;
+		} else if (hint_value == MIO_POOL_BRONZE) {
+			which->mpi_hi = mio_pools.mps_pools[0].mp_id.mpi_hi;
+			which->mpi_lo = mio_pools.mps_pools[0].mp_id.mpi_lo;
+		} else
+			rc = -EINVAL;
+
+		return rc;
+	}
+
+	if (mio_hint_is_set(hints, MIO_HINT_OBJ_HOT_INDEX)) {
+		mio_hint_lookup(hints, MIO_HINT_OBJ_HOT_INDEX, &hotness);
+		if (hotness > MIO_OBJ_HOT) {
+			which->mpi_hi = mio_pools.mps_pools[0].mp_id.mpi_hi;
+			which->mpi_lo = mio_pools.mps_pools[0].mp_id.mpi_lo;
+		} else if (hotness > MIO_OBJ_WARM) {
+			which->mpi_hi = mio_pools.mps_pools[0].mp_id.mpi_hi;
+			which->mpi_lo = mio_pools.mps_pools[0].mp_id.mpi_lo;
+		} else {
+			which->mpi_hi = mio_pools.mps_pools[0].mp_id.mpi_hi;
+			which->mpi_lo = mio_pools.mps_pools[0].mp_id.mpi_lo;
+		}
+
+		return rc;
+	}
+
+	return -EINVAL;
+}
+
 int mio_obj_create(const struct mio_obj_id *oid,
-                   const struct mio_pool_id *pool_id,
+                   const struct mio_pool_id *pool_id, struct mio_hints *hints,
                    struct mio_obj *obj, struct mio_op *op)
 {
 	int rc;
+	struct mio_pool_id which_pool;
+	const struct mio_pool_id *which_pool_ptr;
+
+	if (pool_id == NULL) {
+		if (hints == NULL)
+			which_pool_ptr = NULL;
+		else {
+			rc = obj_pool_select(hints, &which_pool);
+			if (rc == 0)
+				which_pool_ptr = &which_pool;
+			else
+				which_pool_ptr = NULL;
+		}
+	} else
+		which_pool_ptr = pool_id;
 
 	rc = obj_init(obj, oid)? :
 	     mio_obj_op_init(op, obj, MIO_OBJ_CREATE)? :
-	     obj->mo_drv_obj_ops->moo_create(pool_id, obj, op);
+	     obj->mo_drv_obj_ops->moo_create(which_pool_ptr, obj, op);
 	return rc;
 }
 
@@ -248,6 +313,31 @@ int mio_obj_delete(const struct mio_obj_id *oid, struct mio_op *op)
 	return rc;
 }
 
+static void
+obj_stats_update(struct mio_obj *obj, bool is_write,
+		 const struct mio_iovec *iov, int iovcnt)
+{
+	int i;
+	uint64_t now; /* in nano-secconds. */
+	struct mio_obj_stats *stats;
+
+	stats = &obj->mo_attrs.moa_stats;
+	now = mio_now();
+	for (i = 0; i < iovcnt; i++) {
+		if (is_write) {
+			stats->mos_wcount++;
+			stats->mos_wbytes += iov[i].miov_len;
+			stats->mos_wtime = now;
+		} else {
+			stats->mos_rcount++;
+			stats->mos_rbytes += iov[i].miov_len;
+			stats->mos_rtime = now;
+		}
+	}
+	obj->mo_attrs_updated = true;
+	return;
+}
+
 int mio_obj_writev(struct mio_obj *obj,
                    const struct mio_iovec *iov,
                    int iovcnt, struct mio_op *op)
@@ -256,6 +346,7 @@ int mio_obj_writev(struct mio_obj *obj,
 
 	if (obj == NULL || op == NULL)
 		return -EINVAL;
+	obj_stats_update(obj, true, iov, iovcnt);
 
 	rc = mio_obj_op_init(op, obj, MIO_OBJ_WRITE)? :
 	     obj->mo_drv_obj_ops->moo_writev(obj, iov, iovcnt, op);
@@ -270,6 +361,7 @@ int mio_obj_readv(struct mio_obj *obj,
 
 	if (obj == NULL || op == NULL)
 		return -EINVAL;
+	obj_stats_update(obj, false, iov, iovcnt);
 
 	rc = mio_obj_op_init(op, obj, MIO_OBJ_READ)? :
 	     obj->mo_drv_obj_ops->moo_readv(obj, iov, iovcnt, op);
