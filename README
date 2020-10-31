@@ -14,10 +14,10 @@ Uncompress the source code package.
 Run the following steps to build MIO library and examples.
 (1) ./autogen.sh
 (2) ./configure
-    if you install Mero rpms in a customized directory such as your home
-    directory or build Mero from source, run configure like this
+    if you install Motr rpms in a customized directory such as your home
+    directory or build Motr from source, run configure like this
 
-    ./configure --with-libmero=libmero_directory --with-mero-headers=mero_headers_directory
+    ./configure --with-libmotr=libmotr_directory --with-motr-headers=motr_headers_directory
 
 (3) make
 
@@ -31,24 +31,24 @@ to read the written objects. READ threads will verify the data fetched from
 objects.
 
 Run mio_rw_threads following the steps below:
-(1) Start Mero (follow the Mero instruction)
+(1) Start Motr (follow the Cortx-motr instruction)
 
 (2) cd tests
 
 MIO provides a sample configuration file mio_config.yaml in this directory.
-Edit mio_config.yaml to reflect Mero configurations in your system:
-(a) replace the clovis local address, MERO_CLOVIS_INST_ADDR, to yours.
-(b) replace MERO_HA_ADDR with your HA address.
-(c) MERO_PROFILE and MERO_PROCESS_FID (usually no need to change these 2 parameters)
-(d) replace the MERO_USER_GROUP with the Mero user group in your system.
+Edit mio_config.yaml to reflect Motr configurations in your system:
+(a) replace the Motr client local address, MOTR_INST_ADDR, to yours.
+(b) replace MOTR_HA_ADDR with your HA address.
+(c) MOTR_PROFILE and MOTR_PROCESS_FID (usually no need to change these 2 parameters)
+(d) replace the MOTR_USER_GROUP with the Motr user group in your system.
 
 Methods to get the above parameters:
-(a) hctl mero status
-(b) checkout /etc/mero/conf.xc to search strings for M0_CST_HA
-(c) if your system is shipped with clovis sample apps, run
-    clovis-sample-app-dir/scripts/c0appzrcgen 
+(a) hctl motr status
+(b) checkout /etc/motr/sys-*/conf.xc to search strings for M0_CST_HA
+(c) if your system is shipped with Motr sample apps, run
+    motr-sample-app-dir/scripts/c0appzrcgen 
 
-(3) add your account to Mero group then run mio_rw_thread
+(3) add your account to Motr group then run mio_rw_thread
     or run it as root
 
 sudo ../examples/mio_rw_threads -s 4096 -c 1 -n 10 -t 1 -y ./mio_config.yaml -o 1:12346800
@@ -65,6 +65,6 @@ Usage of mio_rw_thread
 All MIO examples use 2 uint64_t to represent an object ID.
 
 (4) MIO also provides with test scripts to test basic functionalities.
-    Run the scripts as root or users of Mero group as above.
+    Run the scripts as root or users of Motr group as above.
 
 sudo ./mio_run_tests.sh

@@ -20,7 +20,7 @@ static void del_set_usage(FILE *file, char *prog_name)
 "Create a key/value set.\n"
 "\n"
 "Mandatory arguments to long options are mandatory for short options too.\n"
-"  -k, --kvset         ID       ID of the mero object\n"
+"  -k, --kvset         ID       ID of the Motr index\n"
 "  -y, --mio_conf_file          MIO YAML configuration file\n"
 "  -h, --help                   shows this help text and exit\n"
 , prog_name);

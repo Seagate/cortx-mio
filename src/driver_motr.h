@@ -10,49 +10,49 @@
 
 #pragma once
 
-#ifndef __DRIVER_CLOVIS_H__
-#define __DRIVER_CLOVIS_H__
+#ifndef __DRIVER_MOTR_H__
+#define __DRIVER_MOTR_H__
 
 #include "lib/memory.h"
-#include "clovis/clovis.h"
-#include "clovis/clovis_idx.h"
+#include "motr/client.h"
+#include "motr/idx.h"
 
-#ifndef __MIO_CLOVIS_COMP_OBJ_LAYER_GET_SUPP__
+#ifndef __MIO_MOTR_COMP_OBJ_LAYER_GET_SUPP__
 #include "lib/list.h"
 #include "lib/tlist.h"
-#include "clovis/clovis_layout.h"
+#include "motr/layout.h"
 
 #ifndef container_of
 #define container_of(ptr, type, member) \
         ((type *)((char *)(ptr)-(char *)(&((type *)0)->member)))
 #endif
-#endif /* __MIO_CLOVIS_COMP_OBJ_LAYER_GET_SUPP__*/
+#endif /* __MIO_MOTR_COMP_OBJ_LAYER_GET_SUPP__*/
 
 #define ARRAY_SIZE(a) ((sizeof (a)) / (sizeof (a)[0]))
 
-#define MIO_CLOVIS_OP(op) \
-	((struct m0_clovis_op *)op->mop_drv_op_chain.mdoc_head->mdo_op)
+#define MIO_MOTR_OP(op) \
+	((struct m0_op *)op->mop_drv_op_chain.mdoc_head->mdo_op)
 
 enum {
-	MIO_CLOVIS_RW_MAX_UNITS_PER_OP = 128
+	MIO_MOTR_RW_MAX_UNITS_PER_OP = 128
 };
 
-extern struct m0_clovis *mio_clovis_instance;
-extern struct m0_clovis_container mio_clovis_container;
-extern struct mio_mero_config *mio_clovis_inst_confs;
+extern struct m0_client *mio_motr_instance;
+extern struct m0_container mio_motr_container;
+extern struct mio_motr_config *mio_motr_inst_confs;
 
-extern struct m0_uint128 mio_clovis_obj_md_kvs_id;
-extern struct m0_fid mio_clovis_obj_md_kvs_fid;
+extern struct m0_uint128 mio_motr_obj_md_kvs_id;
+extern struct m0_fid mio_motr_obj_md_kvs_fid;
 
-extern struct mio_obj_ops mio_clovis_obj_ops;
-extern struct mio_kvs_ops mio_clovis_kvs_ops;
-extern struct mio_comp_obj_ops mio_clovis_comp_obj_ops;
+extern struct mio_obj_ops mio_motr_obj_ops;
+extern struct mio_kvs_ops mio_motr_kvs_ops;
+extern struct mio_comp_obj_ops mio_motr_comp_obj_ops;
 
-void mio_clovis_driver_register();
+void mio_motr_driver_register();
 
 /* Helper functions. */
-struct m0_bufvec* mio__clovis_bufvec_alloc(int nr);
-void mio__clovis_bufvec_free(struct m0_bufvec *bv);
+struct m0_bufvec* mio__motr_bufvec_alloc(int nr);
+void mio__motr_bufvec_free(struct m0_bufvec *bv);
 void mio__obj_id_to_uint128(const struct mio_obj_id *oid,
 			    struct m0_uint128 *uint128);
 void mio__uint128_to_obj_id(struct m0_uint128 *uint128,

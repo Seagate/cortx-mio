@@ -13,7 +13,7 @@
 
 #include "mio_internal.h"
 #include "mio.h"
-#include "driver_clovis.h"
+#include "driver_motr.h"
 
 static struct mio_driver mio_drivers[MIO_DRIVER_NUM];
 
@@ -102,7 +102,7 @@ void mio_driver_register(enum mio_driver_id driver_id,
 
 void mio_drivers_register()
 {
-	mio_clovis_driver_register();
+	mio_motr_driver_register();
 }
 
 /*

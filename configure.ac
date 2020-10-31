@@ -61,7 +61,7 @@ AC_SUBST([LT_RELEASE], [$PACKAGE_VERSION])
 # |     revision and age are applied differently depending on the operating
 # |     system that one is using.
 #
-# E.g., LT_VERSION=1:1:0 results in mero/.libs/libmero.so.1.0.1 file.
+# E.g., LT_VERSION=1:1:0 results in cortx-motr/.libs/libmotr.so.1.0.1 file.
 #
 # See also
 # https://www.gnu.org/software/libtool/manual/libtool.html#Libtool-versioning
@@ -113,8 +113,8 @@ AS_CASE([$host_os],
 
 # define macros 
 AH_TEMPLATE([ENABLE_DEBUG],      [Enable debug info and disable optimizations.])
-AH_TEMPLATE([MERO_LIB],          [Mero library directory])
-AH_TEMPLATE([MERO_INCLUDE],      [Directory for Mero development header files])
+AH_TEMPLATE([MOTR_LIB],          [Motr library directory])
+AH_TEMPLATE([MOTR_INCLUDE],      [Directory for Motr development header files])
 
 # enable/disable options
 AC_ARG_ENABLE([debug],
@@ -125,30 +125,45 @@ AC_ARG_ENABLE([debug],
 AM_CONDITIONAL([ENABLE_DEBUG],
                [test "x$enable_debug" = xyes])
 
-# Set directories for default or customized libmero and Mero headers.
-AC_ARG_WITH([libmero],
-        [AS_HELP_STRING([--with-libmero=path],
-                        [set path to Mero library libmero, default is /usr/lib64])],
-        [LIBMERO=$with_libmero],
-        [LIBMERO=/usr/lib64]
+# Set directories for default or customized libmotr and Motr headers.
+AC_ARG_WITH([libmotr],
+        [AS_HELP_STRING([--with-libmotr=path],
+                        [set path to Motr library libmotr, default is /usr/lib64])],
+        [LIBMOTR=$with_libmotr],
+        [LIBMOTR=/usr/lib64]
 )
-AS_IF([test -z "$LIBMERO" || ! test -d "$LIBMERO/"],
-      [AC_MSG_ERROR([libmero not found! Please, install Mero package or \
-provide the path to a directory using --with-lustre option.])]
-)
-AC_SUBST([LIBMERO])
 
-AC_ARG_WITH([mero-headers],
-        [AS_HELP_STRING([--with-mero-headers=path],
-                        [set path to Mero headers, default is /usr/include/mero])],
-        [MERO_HEADERS=$with_mero_headers],
-        [MERO_HEADERS=/usr/include/mero]
+AC_ARG_WITH([motr-headers],
+        [AS_HELP_STRING([--with-motr-headers=path],
+                        [set path to Motr headers, default is /usr/include/motr])],
+        [MOTR_HEADERS=$with_motr_headers],
+        [MOTR_HEADERS=/usr/include/motr]
 )
-AS_IF([test -z "$MERO_HEADERS" || ! test -d "$MERO_HEADERS/"],
-      [AC_MSG_ERROR([Mero headers not found! Please, install Mero headers or \
-provide the path to a directory using --with-mero-headers option.])]
+
+AC_ARG_WITH([motr-src],
+        [AS_HELP_STRING([--with-motr-src=path],
+                        [build with Motr source])],
+        [
+            LIBMOTR=$with_motr_src/motr/.libs/
+            MOTR_HEADERS=$with_motr_src
+            GALOIS_HEADERS=$with_motr_src/extra-libs/galois/include/
+        ],
+        []
 )
-AC_SUBST([MERO_HEADERS])
+AC_MSG_NOTICE([LIBMOTR=$LIBMOTR])
+AC_MSG_NOTICE([MOTR_HEADERS=$MOTR_HEADERS])
+
+AS_IF([test -z "$LIBMOTR" || ! test -d "$LIBMOTR/"],
+      [AC_MSG_ERROR([libmotr not found! Please, install Motr package or \
+provide the path to a directory using --with-libmotr option.])]
+)
+
+AS_IF([test -z "$MOTR_HEADERS" || ! test -d "$MOTR_HEADERS/"],
+      [AC_MSG_ERROR([Motr headers not found! Please, install Motr headers or \
+provide the path to a directory using --with-motr-headers option.])]
+)
+AC_SUBST([LIBMOTR])
+AC_SUBST([MOTR_HEADERS])
 
 #
 #------------------------------------------------------------------------------#
@@ -238,11 +253,11 @@ AS_IF([test "x$FOUND_SSL_LIB" = xno], [AC_MSG_ERROR([library 'ssl' is required f
 AC_CHECK_HEADERS([openssl/md5.h], [],
                  AC_MSG_ERROR([md5.h is not found. Try to install openssl-devel package]))
 
-# Check libmero
-#AC_SEARCH_LIBS([m0_clovis_init], [mero], [],
-#                 [m0_clovis_init cannot be found! Try install libmero package])
-#AC_CHECK_HEADERS([clovis/clovis.h], [],
-#                 AC_MSG_ERROR([clovis.h is not found. Try to install libmero package]))
+# Check libmotr
+#AC_SEARCH_LIBS([m0_motr_init], [motr], [],
+#                 [m0_motr_init cannot be found! Try install libmotr package])
+#AC_CHECK_HEADERS([motr/client.h], [],
+#                 AC_MSG_ERROR([client.h is not found. Try to install libmotr package]))
 
 #------------------------------------------------------------------------------#
 #                      Handle configuration options                            #
@@ -261,10 +276,9 @@ AS_IF([test x$enable_debug = xyes],
 #------------------------------------------------------------------------------#
 #                             Set up build variables                           #
 #------------------------------------------------------------------------------#
-
 MIO_CPPFLAGS="-D_REENTRANT -D_GNU_SOURCE -DM0_INTERNAL='' -DM0_EXTERN=extern \
              -iquote'$ABS_BUILDDIR' -iquote'$ABS_SRCDIR' -include'config.h' \
-             -I$MERO_HEADERS $MIO_CPPFLAGS"
+             -I$MOTR_HEADERS -I$GALOIS_HEADERS $MIO_CPPFLAGS"
 
 MIO_CPPFLAGS_DIST=$(echo "$MIO_CPPFLAGS" | grep -Po -e '-D\S+|-I/usr\S+' | xargs echo)
 
@@ -279,7 +293,7 @@ MIO_CFLAGS="-pipe -Wall -Werror -Wno-attributes -fno-strict-aliasing $MIO_CFLAGS
 # Scientific is using.
 MIO_CFLAGS="-fno-common $MIO_CFLAGS"
 
-MIO_LDFLAGS="-rdynamic -L$LIBMERO $MIO_LDFLAGS"
+MIO_LDFLAGS="-rdynamic -L$LIBMOTR $MIO_LDFLAGS"
 
 # trim spaces at the end of flags
 MIO_CPPFLAGS=$(echo $MIO_CPPFLAGS | sed 's/[[[:blank:]]]*$//')
@@ -322,8 +336,8 @@ echo "MIO version :  $PACKAGE_VERSION"
 echo ""
 echo "CONFIGURE_OPTS:  $BUILD_CONFIGURE_OPTS"
 echo ""
-echo "LIBMERO     :  \"$LIBMERO\""
-echo "MERO_HEADERS     :  \"$MERO_HEADERS\""
+echo "LIBMOTR     :  \"$LIBMOTR\""
+echo "MOTR_HEADERS     :  \"$MOTR_HEADERS\""
 echo ""
 echo "MIO_CPPFLAGS    :  \"$MIO_CPPFLAGS\""
 echo "MIO_CFLAGS      :  \"$MIO_CFLAGS\""

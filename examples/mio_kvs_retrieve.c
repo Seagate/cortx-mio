@@ -20,7 +20,7 @@ static void get_usage(FILE *file, char *prog_name)
 "Insert pairs to a key/value set.\n"
 "\n"
 "Mandatory arguments to long options are mandatory for short options too.\n"
-"  -k, --kvset         ID        ID of the mero object\n"
+"  -k, --kvset         ID        ID of the Motr index\n"
 "  -s, --startkey      No.       The first serial number of keys\n"
 "  -n, --pairs         nr_pairs  The number of key/value pairs to insert\n"
 "  -y, --mio_conf_file conf      MIO YAML configuration file\n"

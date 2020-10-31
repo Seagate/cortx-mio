@@ -639,7 +639,7 @@ int mio_init(const char *yaml_conf);
 void mio_fini();
 
 /**
- * Some object stores such as Mero supports thread-wise functionalities
+ * Some object stores such as Cortx/motr supports thread-wise functionalities
  * (such as ADDB) which requires thread to be initialised in a certain way.
  * Call mio_thread_init() at the beginning of a thread and mio_thread_fini()
  * at the end of it.

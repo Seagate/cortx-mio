@@ -20,7 +20,7 @@ static void copy_usage(FILE *file, char *prog_name)
 "Copy SOURCE to MIO.\n"
 "\n"
 "Mandatory arguments to long options are mandatory for short options too.\n"
-"  -o, --object         OID       ID of the mero object\n"
+"  -o, --object         OID       ID of the Motr object\n"
 "  -s, --block-size     INT       block size in bytes or with " \
 				 "suffix b/k/m/g/K/M/G\n"
 "  -c, --block-count    INT       number of blocks to copy, can give with " \

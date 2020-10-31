@@ -15,7 +15,7 @@
 
 #include <stdint.h>
 
-#include "clovis/clovis.h"
+#include "motr/client.h"
 
 struct mio;
 struct mio_op;
@@ -40,7 +40,7 @@ struct mio_driver_op;
  *     such as initialisation/finalisation and setting callbacks. (mandate)
  *   - mio_obj_ops defines object access operations (mandate).
  *   - mio_kvs_ops defines key-value operations (optional).
- *   - mero-inspired operations, such as composite object related
+ *   - motr-inspired operations, such as composite object related
  *     operations (optional).
  *
  * Notes on writing driver specific functions to implement the sets of
@@ -142,16 +142,16 @@ struct mio_comp_obj_ops {
 /**
  * MIO defines a generic driver interface to use different object stores
  * as backend. It includes:
- *   - Types of interface driver. Currently only Mero object store is
+ *   - Types of interface driver. Currently only Motr object store is
  *     supported. Ceph driver will be implemented in future.
  *   - Operations to initialise and finalise a driver.
  *   - Operation set that a driver is to implement. Each driver must
  *     implement an object store interface and key-value set interface.
- *     mero-inspired interface is optional.
+ *     motr-inspired interface is optional.
  */
 enum mio_driver_id {
 	MIO_DRIVER_INVALID = -1,
-	MIO_MERO,
+	MIO_MOTR,
 	MIO_DRIVER_NUM
 };
 
@@ -171,7 +171,7 @@ struct mio_driver_sys_ops {
 /**
  * Each Maestro IO driver is defined by a set of operations. Driver
  * initialisaton/finalisation and object and key-value set accessing operations
- * must be implemented for a driver, while mero-inspired operations
+ * must be implemented for a driver, while motr-inspired operations
  * are optional.
  */
 struct mio_driver {
@@ -184,7 +184,7 @@ struct mio_driver {
 	struct mio_obj_ops *md_obj_ops;
 	struct mio_kvs_ops *md_kvs_ops;
 
-	/** Mero-inspired APIs. */
+	/** Motr-inspired APIs. */
 	struct mio_comp_obj_ops *md_comp_obj_ops;
 };
 
@@ -201,7 +201,7 @@ struct mio_driver {
  * Beaware that when chaining multiple driver operations to accomplish
  * a task, it is up to the driver to handle any driver operation's
  * failure, some driver will roll back to a consistent state if proper
- * transcation mechanism is implemented. Current version of clovis driver
+ * transcation mechanism is implemented. Current version of Motr driver
  * simply reports the error back to application. This will be re-visited
  * after DTM is in place.
  *
@@ -268,13 +268,13 @@ void mio_driver_register(enum mio_driver_id driver_id,
 /** Register all drivers when initialising MIO instance. */
 void mio_drivers_register();
 
-void mio_clovis_driver_register();
+void mio_motr_driver_register();
 
 /**
- * mio_mero_config contains configuration parameters to setup an
- * Mero Clovis instance.
+ * mio_motr_config contains configuration parameters to setup an
+ * Motr instance.
  */
-struct mio_mero_config {
+struct mio_motr_config {
 	/** oostore mode is set when 'is_oostore' is TRUE. */
 	bool mc_is_oostore;
 	/**
@@ -284,10 +284,10 @@ struct mio_mero_config {
 	bool mc_is_read_verify;
 
 	/** Local endpoint.*/
-	char *mc_clovis_local_addr;
+	char *mc_motr_local_addr;
 	/** HA service's endpoint.*/
 	char *mc_ha_addr;
-	/** Process fid for rmservice@clovis. */
+	/** Process fid for rmservice@motr. */
 	char *mc_process_fid;
 	char *mc_profile;
 
@@ -303,7 +303,7 @@ struct mio_mero_config {
 	uint32_t mc_max_rpc_msg_size;
 
 	/**
-	 * Default parity group data unit size of an object. As Clovis
+	 * Default parity group data unit size of an object. As Motr 
 	 * internally uses layout id instead of unit size, the layout id
 	 * will be computed from unit size.
 	 */
@@ -311,9 +311,9 @@ struct mio_mero_config {
 	int mc_default_layout_id;
 
 	/*
- 	 * Mero user group.
+ 	 * Motr user group.
  	 */
-	char *mc_mero_group;
+	char *mc_motr_group;
 };
 
 /**

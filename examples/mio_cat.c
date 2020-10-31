@@ -20,7 +20,7 @@ static void cat_usage(FILE *file, char *prog_name)
 "DISPLAY an MIO object's content to OUTPUT_FILE.\n"
 "\n"
 "Mandatory arguments to long options are mandatory for short options too.\n"
-"  -o, --object         OID       ID of the mero object\n"
+"  -o, --object         OID       ID of the Motr object\n"
 "  -s, --block-size     INT       block size in bytes or with " \
 				 "suffix b/k/m/g/K/M/G\n"
 "  -c, --block-count    INT       number of blocks for IO, can give with " \

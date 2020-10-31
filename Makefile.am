@@ -37,7 +37,7 @@ AM_CPPFLAGS  = @MIO_CPPFLAGS@
 AM_CFLAGS    = @MIO_CFLAGS@
 AM_LDFLAGS   = @MIO_LDFLAGS@
 
-AM_DISTCHECK_CONFIGURE_FLAGS = --with-libmero=@LIBMERO@ --with-mero-headers=@MERO_HEADERS@
+AM_DISTCHECK_CONFIGURE_FLAGS = --with-libmotr=@LIBMOTR@ --with-motr-headers=@MOTR_HEADERS@
 
 #-------------------------------------------------------------------------------
 #                               Global variables                               #
@@ -67,10 +67,10 @@ CLEANFILES =
 #-------------------------------------------------------------------------------
 
 lib_LTLIBRARIES          += lib/libmio.la
-lib_libmio_la_CPPFLAGS  = -DM0_TARGET='libmero' $(AM_CPPFLAGS)
+lib_libmio_la_CPPFLAGS  = -DM0_TARGET='libmotr' $(AM_CPPFLAGS)
 lib_libmio_la_LDFLAGS   = -version-info @LT_VERSION@ $(AM_LDFLAGS)
-#lib_libmio_la_LIBADD    = @MERO_LIBS@ @YAML_LIBS@ 
-lib_libmio_la_LIBADD    = -lmero -lyaml 
+#lib_libmio_la_LIBADD    = @MOTR_LIBS@ @YAML_LIBS@ 
+lib_libmio_la_LIBADD    = -lmotr -lyaml 
 
 lib_libmio_la_SOURCES =
 

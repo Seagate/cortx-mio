@@ -16,7 +16,7 @@
 #include <assert.h>
 #include <yaml.h>
 
-#include "clovis/clovis.h"
+#include "motr/client.h"
 
 #include "logger.h"
 #include "mio_internal.h"
@@ -28,7 +28,7 @@ enum {
 
 enum conf_type {
 	MIO = 0,
-	MERO,
+	MOTR,
 	CEPH,
 };
 
@@ -41,18 +41,18 @@ enum conf_key {
 	MIO_LOG_FILE,
 	MIO_DRIVER,
 
-	/* Mero driver. "MERO_CONFIG" is the key for Mero section. */
-	MERO_CONFIG,
-	MERO_CLOVIS_INST_ADDR,
-	MERO_HA_ADDR,
-	MERO_PROFILE,
-	MERO_PROCESS_FID,
-	MERO_IS_OOSTORE,
-	MERO_IS_READ_VERIFY,
-	MERO_TM_RECV_QUEUE_MIN_LEN,
-	MERO_MAX_RPC_MSG_SIZE,
-	MERO_DEFAULT_UNIT_SIZE,
-	MERO_USER_GROUP,
+	/* Motr driver. "MOTR_CONFIG" is the key for Motr section. */
+	MOTR_CONFIG,
+	MOTR_INST_ADDR,
+	MOTR_HA_ADDR,
+	MOTR_PROFILE,
+	MOTR_PROCESS_FID,
+	MOTR_IS_OOSTORE,
+	MOTR_IS_READ_VERIFY,
+	MOTR_TM_RECV_QUEUE_MIN_LEN,
+	MOTR_MAX_RPC_MSG_SIZE,
+	MOTR_DEFAULT_UNIT_SIZE,
+	MOTR_USER_GROUP,
 
 	/* Other drivers such as Ceph defined here. */
 };
@@ -65,7 +65,7 @@ struct conf_entry {
 /**
  * Currently MIO put all configuration entries into one big table defined
  * below, which is not too difficult to manage considering MIO only
- * support Mero driver and has limited configurations. But this will become
+ * support motr driver and has limited configurations. But this will become
  * a problem when more drivers are implemented. A better solution is to
  * seperate the big table into driver specific ones and to define driver's
  * configuration operations to parse its entries.
@@ -91,57 +91,57 @@ struct conf_entry conf_table[] = {
 		.type = MIO
 	},
 
-	/* Mero driver. */
-	[MERO_CONFIG] = {
-		.name = "MERO_CONFIG",
-		.type = MERO
+	/* Motr driver. */
+	[MOTR_CONFIG] = {
+		.name = "MOTR_CONFIG",
+		.type = MOTR
 	},
-	[MERO_CLOVIS_INST_ADDR] = {
-		.name = "MERO_CLOVIS_INST_ADDR",
-		.type = MERO
+	[MOTR_INST_ADDR] = {
+		.name = "MOTR_INST_ADDR",
+		.type = MOTR
 	},
-	[MERO_HA_ADDR] = {
-		.name = "MERO_HA_ADDR",
-		.type = MERO
+	[MOTR_HA_ADDR] = {
+		.name = "MOTR_HA_ADDR",
+		.type = MOTR
 	},
-	[MERO_PROFILE] = {
-		.name = "MERO_PROFILE",
-		.type = MERO
+	[MOTR_PROFILE] = {
+		.name = "MOTR_PROFILE",
+		.type = MOTR
 	},
-	[MERO_PROCESS_FID] = {
-		.name = "MERO_PROCESS_FID",
-		.type = MERO
+	[MOTR_PROCESS_FID] = {
+		.name = "MOTR_PROCESS_FID",
+		.type = MOTR
 	},
-	[MERO_IS_OOSTORE] = {
-		.name = "MERO_IS_OOSTORE",
-		.type = MERO
+	[MOTR_IS_OOSTORE] = {
+		.name = "MOTR_IS_OOSTORE",
+		.type = MOTR
 	},
-	[MERO_IS_READ_VERIFY] = {
-		.name = "MERO_IS_READ_VERIFY",
-		.type = MERO
+	[MOTR_IS_READ_VERIFY] = {
+		.name = "MOTR_IS_READ_VERIFY",
+		.type = MOTR
 	},
-	[MERO_TM_RECV_QUEUE_MIN_LEN] = {
-		.name = "MERO_TM_RECV_QUEUE_MIN_LEN",
-		.type = MERO
+	[MOTR_TM_RECV_QUEUE_MIN_LEN] = {
+		.name = "MOTR_TM_RECV_QUEUE_MIN_LEN",
+		.type = MOTR
 	},
-	[MERO_MAX_RPC_MSG_SIZE] = {
-		.name = "MERO_MAX_RPC_MSG_SIZE",
-		.type = MERO
+	[MOTR_MAX_RPC_MSG_SIZE] = {
+		.name = "MOTR_MAX_RPC_MSG_SIZE",
+		.type = MOTR
 	},
-	[MERO_DEFAULT_UNIT_SIZE] = {
-		.name = "MERO_DEFAULT_UNIT_SIZE",
-		.type = MERO
+	[MOTR_DEFAULT_UNIT_SIZE] = {
+		.name = "MOTR_DEFAULT_UNIT_SIZE",
+		.type = MOTR
 	},
-	[MERO_USER_GROUP] = {
-		.name = "MERO_USER_GROUP",
-		.type = MERO
+	[MOTR_USER_GROUP] = {
+		.name = "MOTR_USER_GROUP",
+		.type = MOTR
 	},
 
 };
 
 static enum mio_driver_id mio_inst_drv_id;
 static void *mio_driver_confs[MIO_DRIVER_NUM];
-static struct mio_mero_config *mero_conf;
+static struct mio_motr_config *motr_conf;
 
 #define NKEYS (sizeof(conf_table)/sizeof(struct conf_entry))
 
@@ -168,8 +168,8 @@ static enum mio_driver_id conf_get_driver_id(const char *str)
 	enum mio_driver_id drv_id = MIO_DRIVER_INVALID;
 
 	assert(str != NULL);
-	if (!strcmp(str, "MERO"))
-		drv_id = MIO_MERO;
+	if (!strcmp(str, "MOTR"))
+		drv_id = MIO_MOTR;
 
 	return drv_id;
 }
@@ -211,13 +211,13 @@ static int conf_alloc_driver(int key)
 	/* Allocate driver's configuration structure if it hasn't been. */
 	type = conf_table[key].type;
 	switch(type) {
-	case MERO:
-		if (mero_conf != NULL)
+	case MOTR:
+		if (motr_conf != NULL)
 			break;
 
-		mero_conf = malloc(sizeof(struct mio_mero_config));
-		mio_driver_confs[MIO_MERO] = mero_conf;
-		if (mero_conf == NULL)
+		motr_conf = malloc(sizeof(struct mio_motr_config));
+		mio_driver_confs[MIO_MOTR] = motr_conf;
+		if (motr_conf == NULL)
 			rc = -ENOMEM;
 		break;
 	case CEPH:
@@ -233,14 +233,14 @@ static int conf_alloc_driver(int key)
 
 static void conf_free_drivers()
 {
-	if (mero_conf) {
-		mio_mem_free(mero_conf->mc_clovis_local_addr);
-		mio_mem_free(mero_conf->mc_ha_addr);
-		mio_mem_free(mero_conf->mc_process_fid);
-		mio_mem_free(mero_conf->mc_profile);
-		free(mero_conf);
-		mero_conf = NULL;
-		mio_driver_confs[MIO_MERO] = NULL;
+	if (motr_conf) {
+		mio_mem_free(motr_conf->mc_motr_local_addr);
+		mio_mem_free(motr_conf->mc_ha_addr);
+		mio_mem_free(motr_conf->mc_process_fid);
+		mio_mem_free(motr_conf->mc_profile);
+		free(motr_conf);
+		motr_conf = NULL;
+		mio_driver_confs[MIO_MOTR] = NULL;
 	}
 }
 
@@ -282,37 +282,37 @@ static int conf_extract_value(enum conf_key key, char *value)
 		assert(mio_instance != NULL && value != NULL);
 		rc = conf_copy_str(&mio_instance->m_log_file, value);
 		break;
-	case MERO_CLOVIS_INST_ADDR:
-		rc = conf_copy_str(&mero_conf->mc_clovis_local_addr, value);
+	case MOTR_INST_ADDR:
+		rc = conf_copy_str(&motr_conf->mc_motr_local_addr, value);
 		break;
-	case MERO_HA_ADDR:
-		rc = conf_copy_str(&mero_conf->mc_ha_addr, value);
+	case MOTR_HA_ADDR:
+		rc = conf_copy_str(&motr_conf->mc_ha_addr, value);
 		break;
-	case MERO_PROFILE:
-		rc = conf_copy_str(&mero_conf->mc_profile, value);
+	case MOTR_PROFILE:
+		rc = conf_copy_str(&motr_conf->mc_profile, value);
 		break;
-	case MERO_PROCESS_FID:
-		rc = conf_copy_str(&mero_conf->mc_process_fid, value);
+	case MOTR_PROCESS_FID:
+		rc = conf_copy_str(&motr_conf->mc_process_fid, value);
 		break;
-	case MERO_TM_RECV_QUEUE_MIN_LEN:
-		mero_conf->mc_tm_recv_queue_min_len = atoi(value);
+	case MOTR_TM_RECV_QUEUE_MIN_LEN:
+		motr_conf->mc_tm_recv_queue_min_len = atoi(value);
 		break;
-	case MERO_MAX_RPC_MSG_SIZE:
-		mero_conf->mc_max_rpc_msg_size = atoi(value);
+	case MOTR_MAX_RPC_MSG_SIZE:
+		motr_conf->mc_max_rpc_msg_size = atoi(value);
 		break;
-	case MERO_DEFAULT_UNIT_SIZE:
-		mero_conf->mc_unit_size = atoi(value);
-		mero_conf->mc_default_layout_id =
-		  m0_clovis_obj_unit_size_to_layout_id(mero_conf->mc_unit_size);
+	case MOTR_DEFAULT_UNIT_SIZE:
+		motr_conf->mc_unit_size = atoi(value);
+		motr_conf->mc_default_layout_id =
+		m0_obj_unit_size_to_layout_id(motr_conf->mc_unit_size);
 		break;
-	case MERO_IS_OOSTORE:
-		mero_conf->mc_is_oostore = atoi(value);
+	case MOTR_IS_OOSTORE:
+		motr_conf->mc_is_oostore = atoi(value);
 		break;
-	case MERO_IS_READ_VERIFY:
-		mero_conf->mc_is_read_verify = atoi(value);
+	case MOTR_IS_READ_VERIFY:
+		motr_conf->mc_is_read_verify = atoi(value);
 		break;
-	case MERO_USER_GROUP:
-		rc = conf_copy_str(&mero_conf->mc_mero_group, value);
+	case MOTR_USER_GROUP:
+		rc = conf_copy_str(&motr_conf->mc_motr_group, value);
 		break;
 	default:
 		break;

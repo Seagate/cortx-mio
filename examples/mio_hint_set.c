@@ -20,7 +20,7 @@ static void hset_usage(FILE *file, char *prog_name)
 "Create an object.\n"
 "\n"
 "Mandatory arguments to long options are mandatory for short options too.\n"
-"  -o, --object         OID       ID of the mero object\n"
+"  -o, --object         OID       ID of the Motr object\n"
 "  -y, --mio_conf_file            MIO YAML configuration file\n"
 "  -h, --help                     shows this help text and exit\n"
 , prog_name);
