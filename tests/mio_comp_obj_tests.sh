@@ -9,7 +9,7 @@ comp_obj_test()
 
 	for i in `seq 1 $nr_objs`;
 	do
-		oid="1:1236"$i""
+		oid="1:1256"$i""
 		test_eval "$mio_comp_obj_cmd -o $oid -y $yaml \
 			   &>> $MIO_TEST_LOG" &>> $MIO_TEST_LOG
 
