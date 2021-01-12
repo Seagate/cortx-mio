@@ -30,6 +30,9 @@ examples_mio_touch_SOURCES = examples/mio_touch.c examples/obj.c \
 examples_mio_unlink_SOURCES = examples/mio_unlink.c  examples/obj.c \
 	  examples/helpers.c
 
+examples_mio_pool_query_SOURCES = examples/mio_pool_query.c examples/obj.c \
+	  examples/helpers.c
+
 examples_mio_hint_set_SOURCES = examples/mio_hint_set.c examples/obj.c \
 	  examples/helpers.c
 

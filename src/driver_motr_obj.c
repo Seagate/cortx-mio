@@ -110,14 +110,15 @@ static int mio_motr_obj_close(struct mio_obj *obj)
 	return 0;
 }
 
-static void pool_id_to_fid(const struct mio_pool *pool_id, struct m0_fid *fid)
+void
+mio__motr_pool_id_to_fid(const struct mio_pool_id *pool_id, struct m0_fid *fid)
 {
-	fid->f_container = pool_id->mp_hi;
-	fid->f_key = pool_id->mp_lo;
+	fid->f_container = pool_id->mpi_hi;
+	fid->f_key = pool_id->mpi_lo;
 }
 
-static int mio_motr_obj_create(const struct mio_pool *pool_id,
-				 struct mio_obj *obj, struct mio_op *op)
+static int mio_motr_obj_create(const struct mio_pool_id *pool_id,
+			       struct mio_obj *obj, struct mio_op *op)
 {
 	int rc = 0;
 	struct m0_fid pfid;
@@ -127,7 +128,7 @@ static int mio_motr_obj_create(const struct mio_pool *pool_id,
 	struct m0_op *cops[1] = {NULL};
 
 	if (pool_id != NULL) {
-		pool_id_to_fid(pool_id, &pfid);
+		mio__motr_pool_id_to_fid(pool_id, &pfid);
 		ptr_pfid = &pfid;
 	}
 

@@ -101,6 +101,24 @@ int obj_write_data_to_file(FILE *fp, uint32_t bcount, struct mio_iovec *data)
 	return i;
 }
 
+static int pool_id_sscanf(char *idstr, struct mio_pool_id *pool_id)
+{
+	int rc;
+	int n;
+	uint64_t u1;
+	uint64_t u2;
+
+	if (idstr == NULL || pool_id == NULL)
+		return -EINVAL;
+
+	rc = sscanf(idstr, "%"SCNx64" : %"SCNx64" %n", &u1, &u2, &n);
+	if (rc < 0)
+		return rc;
+	pool_id->mpi_hi = u1;	
+	pool_id->mpi_lo = u2;	
+	return 0;
+}
+
 static int obj_id_sscanf(char *idstr, struct mio_obj_id *oid)
 {
 	int rc;
@@ -221,12 +239,13 @@ int mio_cmd_obj_args_init(int argc, char **argv,
 	int rc;
 	int option_index = 0;
 	static struct option l_opts[] = {
+				{"pool",        required_argument, NULL, 'p'},
 				{"object",      required_argument, NULL, 'o'},
 				{"block-size",  required_argument, NULL, 's'},
 				{"block-count", required_argument, NULL, 'c'},
 				{"nr_objs",     required_argument, NULL, 'n'},
 				{"async_mod",   no_argument,       NULL, 'a'},
-				{"console",     no_argument,       NULL, 'p'},
+				{"console",     no_argument,       NULL, 'v'},
 				{"mio_conf",    required_argument, NULL, 'y'},
 				{"help",        no_argument,       NULL, 'h'},
 				{0,             0,                 0,     0 }};
@@ -237,14 +256,16 @@ int mio_cmd_obj_args_init(int argc, char **argv,
 	params->cop_block_count = ~0ULL;
 	params->cop_async_mode = false;
 
-	while ((v = getopt_long(argc, argv, ":o:s:c:n:y:t:aph", l_opts,
+	while ((v = getopt_long(argc, argv, ":p:o:s:c:n:y:t:avh", l_opts,
 				&option_index)) != -1)
 	{
 		switch (v) {
+		case 'p':
+			pool_id_sscanf(optarg, &params->cop_pool_id);
+			continue;
 		case 'o':
 			obj_id_sscanf(optarg, &params->cop_oid);
 			continue;
-
 		case 's':
 			rc = mio_cmd_strtou64(optarg, &params->cop_block_size);
 			if (rc < 0)
@@ -269,7 +290,7 @@ int mio_cmd_obj_args_init(int argc, char **argv,
 		case 'a':
 			params->cop_async_mode = true;
 			continue;
-		case 'p':
+		case 'v':
 			print_on_console = true;
 			continue;
 		case 'h':

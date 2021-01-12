@@ -1,18 +1,58 @@
-# umanesan1 client-21
-# MIO configuration Yaml file. 
+# Example MIO configuration Yaml files. 
+# If you want to run on SAGE cluster (for instance client-21), use the first
+# example and comment off the 2nd one. Same for other configuration yaml files
+# in the `tests` directory.
+
+# 1. SAGE cluster client-21
+
+# #MIO_Config_Sections: [MIO_CONFIG, MOTR_CONFIG]
+# MIO_CONFIG:
+#   MIO_LOG_FILE:
+#   MIO_LOG_LEVEL: MIO_DEBUG 
+#   MIO_DRIVER: MOTR
+# MOTR_CONFIG:
+#   MOTR_USER_GROUP: motr 
+#   MOTR_INST_ADDR: 172.18.1.21@o2ib:12345:4:8
+#   MOTR_HA_ADDR: 172.18.1.21@o2ib:12345:1:1
+#   MOTR_PROFILE: <0x7000000000000001:0x4dc>
+#   MOTR_PROCESS_FID: <0x7200000000000001:0x11d>
+#   MOTR_DEFAULT_UNIT_SIZE: 1048576
+#   MOTR_IS_OOSTORE: 1
+#   MOTR_IS_READ_VERIFY: 0
+#   MOTR_TM_RECV_QUEUE_MIN_LEN: 2
+#   MOTR_MAX_RPC_MSG_SIZE: 131072
+#   MOTR_POOLS:
+#     # Set SAGE cluster pools, ranking from high performance to low. 
+#     # The pool configuration parameters can be queried using hare.
+#     # MOTR_POOL_TYPE currently Only supports HDD, SSD or NVM.
+#     - MOTR_POOL_NAME:  
+#       MOTR_POOL_ID:
+#       MOTR_POOL_TYPE: 
+#     - MOTR_POOL_NAME:
+#       MOTR_POOL_ID:
+#       MOTR_POOL_TYPE:
+#     # If the cluster has more pools, list below.  
+
+# 2. Virtual machine configurations for development/test.
+
 #MIO_Config_Sections: [MIO_CONFIG, MOTR_CONFIG]
 MIO_CONFIG:
   MIO_LOG_FILE:
   MIO_LOG_LEVEL: MIO_DEBUG 
   MIO_DRIVER: MOTR
+
 MOTR_CONFIG:
   MOTR_USER_GROUP: motr 
-  MOTR_INST_ADDR: 172.18.1.21@o2ib:12345:4:8
-  MOTR_HA_ADDR: 172.18.1.21@o2ib:12345:1:1
-  MOTR_PROFILE: <0x7000000000000001:0x4dc>
-  MOTR_PROCESS_FID: <0x7200000000000001:0x11d>
+  MOTR_INST_ADDR: 192.168.0.23@tcp:12345:34:101
+  MOTR_HA_ADDR: 192.168.0.23@tcp:12345:34:1
+  MOTR_PROFILE: <0x7000000000000001:0>
+  MOTR_PROCESS_FID: <0x7200000000000000:0>
   MOTR_DEFAULT_UNIT_SIZE: 1048576
   MOTR_IS_OOSTORE: 1
   MOTR_IS_READ_VERIFY: 0
   MOTR_TM_RECV_QUEUE_MIN_LEN: 2
   MOTR_MAX_RPC_MSG_SIZE: 131072
+  MOTR_POOLS:
+    - MOTR_POOL_NAME: pool1 
+      MOTR_POOL_ID:   0x6f00000000000001:9
+      MOTR_POOL_TYPE: HDD 

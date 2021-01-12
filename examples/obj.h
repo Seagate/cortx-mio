@@ -29,6 +29,8 @@ enum {
 struct mio_cmd_obj_params {
 	char *cop_conf_fname;
 
+	struct mio_pool_id cop_pool_id;
+
 	struct mio_obj_id cop_oid;
 	int cop_nr_objs;
 	uint64_t cop_block_size;

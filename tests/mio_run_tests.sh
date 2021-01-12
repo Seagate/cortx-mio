@@ -22,6 +22,7 @@ MIO_MAX_NR_OBJS=4
 . ${MIO_TESTS_DIR}/mio_obj_io_tests.sh
 . ${MIO_TESTS_DIR}/mio_kvs_tests.sh
 . ${MIO_TESTS_DIR}/mio_comp_obj_tests.sh
+. ${MIO_TESTS_DIR}/mio_pool_tests.sh
 . ${MIO_TESTS_DIR}/mio_obj_hint_tests.sh
 
 mio_run_tests()
@@ -50,7 +51,13 @@ mio_run_tests()
 		return 1
 	}
 
-	echo "[T5] Object hint tests"
+	echo "[T5] Pool tests"
+	mio_pool_tests || {
+		echo "Failed"
+		return 1
+	}
+
+	echo "[T6] Object hint tests"
 	mio_obj_hint_tests 1 || {
 		echo "Failed"
 		return 1
