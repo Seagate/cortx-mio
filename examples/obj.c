@@ -186,7 +186,35 @@ int obj_create(struct mio_obj_id *oid, struct mio_obj *obj)
 
 create:
 	memset(&op, 0, sizeof op);
-	rc = mio_obj_create(oid, NULL, obj, &op);
+	rc = mio_obj_create(oid, NULL, NULL, obj, &op);
+	if (rc != 0)
+		return rc;
+
+	rc = mio_cmd_wait_on_op(&op);
+	return rc;
+}
+
+/*
+ * Try to open an object first. If it doesn't exist, create
+ * a new one.
+ */
+int obj_open_or_create(struct mio_obj_id *oid, struct mio_obj *obj)
+{
+	int rc;
+	struct mio_op op;
+
+	memset(&op, 0, sizeof op);
+	rc = obj_open(oid, obj);
+	if (rc == 0)
+		return 0;
+	else if (rc == -ENOENT)
+		goto create;
+	else
+		return rc;
+
+create:
+	memset(&op, 0, sizeof op);
+	rc = mio_obj_create(oid, NULL, NULL, obj, &op);
 	if (rc != 0)
 		return rc;
 

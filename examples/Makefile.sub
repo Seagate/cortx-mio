@@ -39,6 +39,10 @@ examples_mio_hint_set_SOURCES = examples/mio_hint_set.c examples/obj.c \
 examples_mio_hint_stat_SOURCES = examples/mio_hint_stat.c examples/obj.c \
 	  examples/helpers.c
 
+examples_mio_obj_hints_SOURCES = examples/mio_obj_hints.c examples/obj.c \
+	  examples/obj_io_poll.c examples/obj_io_cbs.c \
+	  examples/helpers.c
+
 examples_mio_comp_obj_example_SOURCES = examples/mio_comp_obj.c examples/obj.c \
 	  examples/helpers.c
 

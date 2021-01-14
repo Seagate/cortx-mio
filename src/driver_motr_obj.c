@@ -106,8 +106,34 @@ error:
 
 static int mio_motr_obj_close(struct mio_obj *obj)
 {
+	int rc = 0;
+	struct mio_op mop;
+	struct m0_op *cop;
+
+	if (!obj->mo_attrs_updated)
+		goto obj_fini;
+
+	/* Update object attributes to metada key-value store. */
+	mio_memset(&mop, 0, sizeof mop);
+	mio_obj_op_init(&mop, obj, MIO_OBJ_ATTRS_SET);
+	rc = motr_obj_attrs_query(M0_IC_PUT, obj,
+				  motr_obj_attrs_query_free_pp, &mop);
+	if (rc < 0)
+		return rc;
+
+	cop = MIO_MOTR_OP((&mop));
+	rc = m0_op_wait(cop,
+			M0_BITS(M0_OS_FAILED,
+				M0_OS_STABLE),
+			M0_TIME_NEVER);
+	rc = rc? : m0_rc(cop);
+	m0_op_fini(cop);
+	m0_op_free(cop);
+
+obj_fini:
+	/* Finalise motr's object. */
 	m0_obj_fini((struct m0_obj *)obj->mo_drv_obj);
-	return 0;
+	return rc;
 }
 
 void
@@ -1407,7 +1433,7 @@ static int motr_obj_attr_nonhint_size(struct mio_obj *obj)
 	int size;
 
 	size = sizeof obj->mo_attrs.moa_size;
-	size += sizeof obj->mo_attrs.moa_wtime;
+	size += sizeof obj->mo_attrs.moa_stats;
 	return size;
 }
 
@@ -1671,10 +1697,8 @@ static int mio_motr_obj_hint_store(struct mio_obj *obj)
 		return rc;
 
 	cop = MIO_MOTR_OP((&mop));
-	rc = m0_op_wait(cop,
-			       M0_BITS(M0_OS_FAILED,
-				       M0_OS_STABLE),
-			       M0_TIME_NEVER);
+	rc = m0_op_wait(cop, M0_BITS(M0_OS_FAILED, M0_OS_STABLE),
+			M0_TIME_NEVER);
 	rc = rc? : m0_rc(cop);
 	m0_op_fini(cop);
 	m0_op_free(cop);
