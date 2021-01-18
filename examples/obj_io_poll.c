@@ -61,6 +61,9 @@ int obj_read(struct mio_obj *obj, uint32_t bcount, struct mio_iovec *data)
 	return rc;
 }
 
+/*
+ * Create an object and copy data from a file to the newly created object.
+ */
 int mio_cmd_obj_write(char *src, struct mio_obj_id *oid,
 		      uint32_t block_size, uint32_t block_count)
 {
@@ -71,8 +74,14 @@ int mio_cmd_obj_write(char *src, struct mio_obj_id *oid,
 	uint64_t max_block_count;
 	struct mio_iovec *data;
 	struct mio_obj obj;
-	FILE *fp;
+	FILE *fp = NULL;
 	struct stat src_stat;
+
+	/* If `src` file is not set, use pseudo data. */
+	if (src == NULL) {
+		max_index = block_count * block_size;
+		goto create_obj;
+	}
 
 	/* Open source file */
 	fp = fopen(src, "r");
@@ -87,9 +96,10 @@ int mio_cmd_obj_write(char *src, struct mio_obj_id *oid,
 	block_count = block_count > max_block_count?
 		      max_block_count : block_count;
 
+create_obj:
 	/* Create the target object if it doesn't exist. */
 	memset(&obj, 0, sizeof obj);
-	rc = obj_open_or_create(oid, &obj);
+	rc = obj_open_or_create(oid, &obj, NULL);
 	if (rc < 0)
 		goto src_close;
 
@@ -125,10 +135,14 @@ int mio_cmd_obj_write(char *src, struct mio_obj_id *oid,
 	mio_obj_close(&obj);
 
 src_close:
-	fclose(fp);
+	if (fp)
+		fclose(fp);
 	return rc;
 }
 
+/*
+ * Read an object and output to a file or stderr.
+ */
 int mio_cmd_obj_read(struct mio_obj_id *oid, char *dest,
 		     uint32_t block_size, uint32_t block_count)
 {
@@ -177,7 +191,8 @@ int mio_cmd_obj_read(struct mio_obj_id *oid, char *dest,
 		/* Copy data to the file. */
 		rc = obj_write_data_to_file(fp, bcount, data);
 		if (rc != bcount) {
-			fprintf(stderr, "Writing to file failed!\n");
+			fprintf(stderr, "[mio_cmd_obj_read] "
+					"Writing to output file failed!\n");
 			obj_cleanup_iovecs(data);
 			break;
 		}
@@ -193,6 +208,77 @@ int mio_cmd_obj_read(struct mio_obj_id *oid, char *dest,
 dest_close:
 	if(fp != NULL)
 		fclose(fp);
+	return rc;
+}
+
+/*
+ * Copy from one object to another. A new object will be created
+ * if the `to` object doesn't exist. This function also shows how to use
+ * MIO's hint such as MIO_HINT_OBJ_OBJ_WHERE or MIO_HINT_OBJ_HOT_INDEX
+ * to create an object in a specified pool.
+ */
+int mio_cmd_obj_copy(struct mio_obj_id *from_oid, struct mio_obj_id *to_oid,
+		     uint32_t block_size, uint32_t block_count,
+		     struct mio_cmd_obj_hint *chint)
+{
+	int rc = 0;
+	uint32_t bcount;
+	uint64_t last_index;
+	uint64_t max_index;
+	uint64_t max_block_count;
+	struct mio_iovec *data;
+	struct mio_obj from_obj;
+	struct mio_obj to_obj;
+
+	/* Open `from` object. */
+	memset(&from_obj, 0, sizeof from_obj);
+	rc = obj_open(from_oid, &from_obj);
+	if (rc < 0)
+		goto obj_close;
+	max_index = from_obj.mo_attrs.moa_size;
+	max_block_count = (max_index - 1) / block_size + 1;
+	block_count = block_count > max_block_count?
+		      max_block_count : block_count;
+
+	/* Create the `to` object if it doesn't exist. */
+	memset(&to_obj, 0, sizeof to_obj);
+	rc = obj_open_or_create(to_oid, &to_obj, chint);
+	if (rc < 0)
+		goto obj_close;
+
+	last_index = 0;
+	while (block_count > 0) {
+		bcount = (block_count > MIO_CMD_MAX_BLOCK_COUNT_PER_OP)?
+			  MIO_CMD_MAX_BLOCK_COUNT_PER_OP : block_count;
+		rc = obj_alloc_iovecs(&data, bcount, block_size,
+				      last_index, max_index);
+		if (rc != 0)
+			break;
+
+		/* Read data from source file. */
+		rc = obj_read(&from_obj, bcount, data);
+		if (rc != 0) {
+			fprintf(stderr, "Failed in reading from object!\n");
+			obj_cleanup_iovecs(data);
+			break;
+		}
+
+		/* Copy data to the object*/
+		rc = obj_write(&to_obj, bcount, data);
+		if (rc != 0) {
+			fprintf(stderr, "Writing to object failed!\n");
+			obj_cleanup_iovecs(data);
+			break;
+		}
+		obj_cleanup_iovecs(data);
+		block_count -= bcount;
+		last_index += bcount * block_size;
+	}
+
+	mio_obj_close(&to_obj);
+
+obj_close:
+	mio_obj_close(&from_obj);
 	return rc;
 }
 

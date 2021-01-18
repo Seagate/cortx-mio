@@ -223,8 +223,8 @@ int mio_cmd_obj_write_async(char *src, struct mio_obj_id *oid,
 		      max_block_count : block_count;
 
 	memset(&obj, 0, sizeof obj);
-	rc = obj_create(oid, &obj);
-	if (rc < 0)
+	rc = obj_create(oid, &obj, NULL);
+	if (rc < 0 && rc != -EEXIST)
 		goto src_close;
 
 	rc = obj_io_async_init(block_count);

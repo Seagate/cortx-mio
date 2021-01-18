@@ -169,6 +169,15 @@ void mio_op_callbacks_set(struct mio_op *op,
 			  mio_callback cb_complete,
 			  mio_callback cb_failed,
 			  void *cb_data);
+/**
+ * Define the scope of a hint. A hint can be used for an object,
+ * a key-value set or system level parameters.
+ */
+enum mio_hint_scope {
+	MIO_HINT_SCOPE_OBJ,
+	MIO_HINT_SCOPE_KVSET,
+	MIO_HINT_SCOPE_SYS
+};
 
 /**
  * Hints set to this opened object. MIO differentiates
@@ -186,12 +195,19 @@ enum mio_hint_type {
 	MIO_HINT_PERSISTENT
 };
 
-enum mio_hint_key {
-	MIO_HINT_OBJ_CACHE_FLUSH_SIZE,
+/** Hints for individual object. */
+enum mio_obj_hint_key {
 	MIO_HINT_OBJ_LIFETIME,
 	MIO_HINT_OBJ_WHERE,
 	MIO_HINT_OBJ_HOT_INDEX,
-	MIO_HINT_KEY_NUM
+
+	MIO_HINT_OBJ_KEY_NUM
+};
+
+/* System wide hints. */
+enum mio_sys_hint_key {
+	MIO_HINT_HOT_OBJ_THRESHOLD,
+	MIO_HINT_COLD_OBJ_THRESHOLD,
 };
 
 enum mio_hint_value {
@@ -204,6 +220,8 @@ enum mio_hint_value {
 struct mio_hints {
     struct mio_hint_map mh_map;
 };
+
+extern struct mio_hints mio_sys_hints;
 
 /**
  * Object identifier is defined as a byte array with lower-indexed/big-endian
@@ -309,7 +327,7 @@ enum {
  */
 struct mio_pool {
 	/** the name by which this layer is referenced by the user */
-	char mp_name[MIO_POOL_MAX_NAME_LEN];
+	char mp_name[MIO_POOL_MAX_NAME_LEN + 1];
 	
 	/** Pool id. */
  	struct mio_pool_id mp_id;
@@ -488,7 +506,10 @@ int mio_obj_readv(struct mio_obj *obj,
 int mio_obj_sync(struct mio_obj *obj, struct mio_op *op);
 
 /**
- * Send a request to retrieve object size.
+ * Send a request to retrieve object size. When an object is
+ * newly openned, its object attributes are retrieved including
+ * object size (struct mio_obj::mo_attrs::moa_size). Object's
+ * size can later be updated by calling mio_obj_size().
  *
  * @param obj The object in question.
  * @param op[out]. The returned operation data structure for
@@ -615,6 +636,8 @@ int mio_obj_hints_get(struct mio_obj *obj, struct mio_hints *hints);
 int mio_obj_hint_set(struct mio_obj *obj, int hint_key, uint64_t hint_value);
 int mio_obj_hint_get(struct mio_obj *obj, int hint_key, uint64_t *hint_value);
 
+int mio_sys_hint_set(int hint_key, uint64_t hint_value);
+int mio_sys_hint_get(int hint_key, uint64_t *hint_value);
 /**
  * Helper functions to set or get individual hint.
  */
@@ -623,8 +646,8 @@ void mio_hints_fini(struct mio_hints *hints);
 int mio_hint_add(struct mio_hints *hints, int hint_key, uint64_t hint_value);
 int mio_hint_lookup(struct mio_hints *hints, int hint_key, uint64_t *hint_value);
 
-enum mio_hint_type mio_hint_type(enum mio_hint_key key);
-char* mio_hint_name(enum mio_hint_key key);
+enum mio_hint_type mio_hint_type(enum mio_hint_scope scope, int key);
+char* mio_hint_name(enum mio_hint_scope scope, int key);
 
 /**
  * TODO: short description/definition of composite object.

@@ -24,6 +24,9 @@ examples_mio_rw_lock_SOURCES = examples/mio_rw_lock.c \
 	  examples/obj.c examples/obj_io_poll.c \
 	  examples/helpers.c
 
+examples_mio_hsm_SOURCES = examples/mio_hsm.c examples/obj.c \
+	  examples/obj_io_poll.c examples/helpers.c
+
 examples_mio_touch_SOURCES = examples/mio_touch.c examples/obj.c \
 	  examples/helpers.c
  

@@ -228,9 +228,8 @@ void mio_obj_close(struct mio_obj *obj)
 }
 
 enum {
-	MIO_OBJ_COLD = 10,
-	MIO_OBJ_WARM = 100,
-	MIO_OBJ_HOT  = 1000
+       MIO_DEFAULT_COLD_OBJ_THLD = 16,
+       MIO_DEFAULT_HOT_OBJ_THLD  = 128
 };
 
 static int obj_pool_select(struct mio_hints *hints, struct mio_pool_id *which)
@@ -238,18 +237,23 @@ static int obj_pool_select(struct mio_hints *hints, struct mio_pool_id *which)
 	int rc = 0;
 	uint64_t hint_value;
 	uint64_t hotness;
+	uint64_t hot_thld;
+	uint64_t cold_thld;
 
 	which->mpi_hi = 0x0;
 	which->mpi_lo = 0x0;
 	if (mio_hint_is_set(hints, MIO_HINT_OBJ_WHERE)) {
 		mio_hint_lookup(hints, MIO_HINT_OBJ_WHERE, &hint_value);
 		if (hint_value == MIO_POOL_GOLD) {
+			mio_log(MIO_DEBUG, "[obj_pool_select] GOLD\n");
 			which->mpi_hi = mio_pools.mps_pools[0].mp_id.mpi_hi;
 			which->mpi_lo = mio_pools.mps_pools[0].mp_id.mpi_lo;
 		} else if (hint_value == MIO_POOL_SILVER) {
+			mio_log(MIO_DEBUG, "[obj_pool_select] SILVER\n");
 			which->mpi_hi = mio_pools.mps_pools[0].mp_id.mpi_hi;
 			which->mpi_lo = mio_pools.mps_pools[0].mp_id.mpi_lo;
 		} else if (hint_value == MIO_POOL_BRONZE) {
+			mio_log(MIO_DEBUG, "[obj_pool_select] BRONZE\n");
 			which->mpi_hi = mio_pools.mps_pools[0].mp_id.mpi_hi;
 			which->mpi_lo = mio_pools.mps_pools[0].mp_id.mpi_lo;
 		} else
@@ -259,14 +263,27 @@ static int obj_pool_select(struct mio_hints *hints, struct mio_pool_id *which)
 	}
 
 	if (mio_hint_is_set(hints, MIO_HINT_OBJ_HOT_INDEX)) {
-		mio_hint_lookup(hints, MIO_HINT_OBJ_HOT_INDEX, &hotness);
-		if (hotness > MIO_OBJ_HOT) {
+		rc = mio_hint_lookup(hints, MIO_HINT_OBJ_HOT_INDEX, &hotness);
+		if (rc < 0)
+			return rc;
+
+		rc = mio_sys_hint_get(MIO_HINT_HOT_OBJ_THRESHOLD, &hot_thld);
+		if (rc < 0)
+			hot_thld = MIO_DEFAULT_HOT_OBJ_THLD;
+		rc = mio_sys_hint_get(MIO_HINT_COLD_OBJ_THRESHOLD, &cold_thld);
+		if (rc < 0)
+			cold_thld = MIO_DEFAULT_COLD_OBJ_THLD;
+
+		if (hotness > hot_thld) {
+			mio_log(MIO_DEBUG, "[obj_pool_select] HOT\n");
 			which->mpi_hi = mio_pools.mps_pools[0].mp_id.mpi_hi;
 			which->mpi_lo = mio_pools.mps_pools[0].mp_id.mpi_lo;
-		} else if (hotness > MIO_OBJ_WARM) {
+		} else if (hotness < cold_thld) {
+			mio_log(MIO_DEBUG, "[obj_pool_select] COLD\n");
 			which->mpi_hi = mio_pools.mps_pools[0].mp_id.mpi_hi;
 			which->mpi_lo = mio_pools.mps_pools[0].mp_id.mpi_lo;
 		} else {
+			mio_log(MIO_DEBUG, "[obj_pool_select] WARM\n");
 			which->mpi_hi = mio_pools.mps_pools[0].mp_id.mpi_hi;
 			which->mpi_lo = mio_pools.mps_pools[0].mp_id.mpi_lo;
 		}
@@ -807,6 +824,8 @@ int mio_init(const char *yaml_conf)
 		goto error;
 	}
 
+	mio_hints_init(&mio_sys_hints);
+
 	return rc;
 
 error:
@@ -859,4 +878,5 @@ void mio_thread_fini(struct mio_thread *thread)
  */
 /*
  * vim: tabstop=8 shiftwidth=8 noexpandtab textwidth=80 nowrap
+ *
  */

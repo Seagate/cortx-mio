@@ -134,8 +134,8 @@ static int rwt_obj_write(struct rwt_obj_todo *todo)
 
 	/* Create the target object if it doesn't exist. */
 	memset(&obj, 0, sizeof obj);
-	rc = obj_create(oid, &obj);
-	if (rc < 0)
+	rc = obj_create(oid, &obj, NULL);
+	if (rc < 0 && rc != -EEXIST)
 		return rc;
 
 	last_index = 0;
@@ -222,7 +222,6 @@ static int rwt_obj_read(struct rwt_obj_todo *todo)
 dest_close:
 	return rc;
 }
-
 
 static void* rwt_writer(void *in)
 {

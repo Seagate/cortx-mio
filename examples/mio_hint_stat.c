@@ -47,8 +47,8 @@ static int obj_hint_stat(struct mio_obj_id *oid)
 	if (rc < 0)
 		return rc;
 
-	for (i = 0; i < MIO_HINT_KEY_NUM; i++) {
-		hname = mio_hint_name(i);
+	for (i = 0; i < MIO_HINT_OBJ_KEY_NUM; i++) {
+		hname = mio_hint_name(MIO_HINT_SCOPE_OBJ, i);
 		rc = mio_hint_lookup(&hints, i, &hvalue);
 		if (rc < 0)
 			continue;

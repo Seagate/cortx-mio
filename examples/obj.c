@@ -63,7 +63,17 @@ int obj_read_data_from_file(FILE *fp, uint32_t bcount, uint32_t bsize,
 {
 	int i;
 	int rc;
+	char signature[5] = {'M', 'I', 'O', 'W', 'R'};
 
+	/* Generate pseudo data. */
+	if (fp == NULL) {
+		for (i = 0; i < bcount; i++)
+			memset(data[i].miov_base, signature[i%5],
+			       data[i].miov_len);
+		return i;
+	}
+
+	/* Read from file. */
 	for (i = 0; i < bcount; i++) {
 		rc = fread(data[i].miov_base, data[i].miov_len, 1, fp);
 		if (rc != 1)
@@ -83,7 +93,9 @@ int obj_write_data_to_file(FILE *fp, uint32_t bcount, struct mio_iovec *data)
 		for(i = 0; i < bcount; i++) {
 			rc = fwrite(data[i].miov_base, data[i].miov_len, 1, fp);
 			if (rc != 1) {
-				fprintf(stderr, "Writing to output file failed!\n");
+				fprintf(stderr,
+					"[obj_write_data_to_file] "
+					"Writing to output file failed!\n");
 				break;
 			}
 		}
@@ -169,12 +181,17 @@ void obj_close(struct mio_obj *obj)
 	mio_obj_close(obj);
 }
 
-int obj_create(struct mio_obj_id *oid, struct mio_obj *obj)
+int obj_create(struct mio_obj_id *oid,
+	       struct mio_obj *obj, struct mio_cmd_obj_hint *chint)
 {
 	int rc;
 	struct mio_op op;
+	struct mio_hints hints;
+	struct mio_hints *hints_ptr = NULL;
 
+	memset(&hints, 0, sizeof hints);
 	memset(&op, 0, sizeof op);
+
 	rc = obj_open(oid, obj);
 	if (rc == 0) {
 		fprintf(stderr, "Object exists!\n");
@@ -185,8 +202,20 @@ int obj_create(struct mio_obj_id *oid, struct mio_obj *obj)
 		return rc;
 
 create:
+	if (chint != NULL) {
+        	mio_hints_init(&hints);
+        	rc = mio_hint_add(&hints, chint->co_hkey, chint->co_hvalue);
+       		if (rc < 0) {
+                	fprintf(stderr, "Failed to set hint %s\n",
+                        	mio_hint_name(MIO_HINT_SCOPE_OBJ,
+					      chint->co_hkey));
+                	return rc;
+        	}
+		hints_ptr = &hints;
+	}
+
 	memset(&op, 0, sizeof op);
-	rc = mio_obj_create(oid, NULL, NULL, obj, &op);
+	rc = mio_obj_create(oid, NULL, hints_ptr, obj, &op);
 	if (rc != 0)
 		return rc;
 
@@ -198,12 +227,17 @@ create:
  * Try to open an object first. If it doesn't exist, create
  * a new one.
  */
-int obj_open_or_create(struct mio_obj_id *oid, struct mio_obj *obj)
+int obj_open_or_create(struct mio_obj_id *oid,
+		       struct mio_obj *obj, struct mio_cmd_obj_hint *chint)
 {
 	int rc;
 	struct mio_op op;
+	struct mio_hints hints;
+	struct mio_hints *hints_ptr = NULL;
 
+	memset(&hints, 0, sizeof hints);
 	memset(&op, 0, sizeof op);
+
 	rc = obj_open(oid, obj);
 	if (rc == 0)
 		return 0;
@@ -213,8 +247,20 @@ int obj_open_or_create(struct mio_obj_id *oid, struct mio_obj *obj)
 		return rc;
 
 create:
+	if (chint != NULL) {
+     		mio_hints_init(&hints);
+        	rc = mio_hint_add(&hints, chint->co_hkey, chint->co_hvalue);
+        	if (rc < 0) {
+                	fprintf(stderr, "Failed to set hint %s\n",
+                        	mio_hint_name(MIO_HINT_SCOPE_OBJ,
+					      chint->co_hkey));
+                	return rc;
+        	}
+		hints_ptr = &hints;
+	}
+
 	memset(&op, 0, sizeof op);
-	rc = mio_obj_create(oid, NULL, NULL, obj, &op);
+	rc = mio_obj_create(oid, NULL, hints_ptr, obj, &op);
 	if (rc != 0)
 		return rc;
 
@@ -241,7 +287,7 @@ int mio_cmd_obj_touch(struct mio_obj_id *oid)
 	struct mio_obj obj;
 
 	memset(&obj, 0, sizeof obj);
-	return obj_create(oid, &obj);
+	return obj_create(oid, &obj, NULL);
 }
 
 int mio_cmd_obj_unlink(struct mio_obj_id *oid)

@@ -384,6 +384,7 @@ static int conf_extract_key(enum conf_key *key, char *token)
 static int conf_extract_value(enum conf_key key, char *value)
 {
 	int rc = 0;
+	int slen = 0;
 	struct mio_pool *pool;
 
 	/* Extract configuration value. */
@@ -437,7 +438,11 @@ static int conf_extract_value(enum conf_key key, char *value)
 		break;
 	case MOTR_POOL_NAME:
 		pool = mio_pools.mps_pools + mio_pools.mps_nr_pools - 1;
-		strncpy(pool->mp_name, value, MIO_POOL_MAX_NAME_LEN);
+		slen = strlen(value);
+		if (slen > MIO_POOL_MAX_NAME_LEN)
+			rc = -EINVAL;
+		else
+			memcpy(pool->mp_name, value, slen + 1);
 		break;
 	case MOTR_POOL_ID:
 		pool = mio_pools.mps_pools + mio_pools.mps_nr_pools - 1;

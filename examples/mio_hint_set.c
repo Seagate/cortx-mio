@@ -39,11 +39,11 @@ static int obj_hint_set(struct mio_obj_id *oid)
 		return rc;
 	mio_hints_init(&hints);
 
-	for (i = 0; i < MIO_HINT_KEY_NUM; i++) {
+	for (i = 0; i < MIO_HINT_OBJ_KEY_NUM; i++) {
 		rc = mio_hint_add(&hints, i, i);
 		if (rc < 0) {
 			fprintf(stderr, "Failed to set hint %s\n",
-				mio_hint_name(i));
+				mio_hint_name(MIO_HINT_SCOPE_OBJ, i));
 			break;
 		}
 	}

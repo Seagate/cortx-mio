@@ -24,11 +24,7 @@ struct hint {
 	enum mio_hint_type h_type;
 };
 
-static struct hint hint_table[] = {
-	[MIO_HINT_OBJ_CACHE_FLUSH_SIZE] = {
-		.h_name = "MIO_HINT_OBJ_CACHE_FLUSH_SIZE",
-		.h_type = MIO_HINT_SESSION,
-	},
+static struct hint obj_hint_table[] = {
 	[MIO_HINT_OBJ_LIFETIME] = {
 		.h_name = "MIO_HINT_OBJ_LIFETIME",
 		.h_type = MIO_HINT_PERSISTENT,
@@ -42,6 +38,19 @@ static struct hint hint_table[] = {
 		.h_type = MIO_HINT_PERSISTENT,
 	}
 };
+
+static struct hint sys_hint_table[] = {
+	[MIO_HINT_HOT_OBJ_THRESHOLD] = {
+		.h_name = "MIO_HINT_HOT_OBJ_THRESHOLD",
+		.h_type = MIO_HINT_SESSION,
+	},
+	[MIO_HINT_COLD_OBJ_THRESHOLD] = {
+		.h_name = "MIO_HINT_COLD_OBJ_THRESHOLD",
+		.h_type = MIO_HINT_SESSION,
+	},
+};
+
+struct mio_hints mio_sys_hints;
 
 int mio_hint_map_init(struct mio_hint_map *map, int nr_entries)
 {
@@ -161,19 +170,48 @@ int mio_hint_map_get(struct mio_hint_map *map, int key, uint64_t *value)
 	return 0;
 }
 
-#define NKEYS (sizeof(hint_table)/sizeof(struct hint))
-enum mio_hint_type mio_hint_type(enum mio_hint_key key)
+#define OBJ_NKEYS (sizeof(obj_hint_table)/sizeof(struct hint))
+#define SYS_NKEYS (sizeof(sys_hint_table)/sizeof(struct hint))
+enum mio_hint_type mio_hint_type(enum mio_hint_scope scope, int key)
 {
-	if (key < 0 || key >= NKEYS)
-		return -EINVAL;
-	return hint_table[key].h_type;
+	 enum mio_hint_type type = -EINVAL;
+
+	switch(scope) {
+	case MIO_HINT_SCOPE_OBJ:
+		if (key >=0 && key < OBJ_NKEYS)
+			type = obj_hint_table[key].h_type;
+		break;
+	case MIO_HINT_SCOPE_SYS:
+		if (key >= 0 && key < SYS_NKEYS)
+			type = sys_hint_table[key].h_type;
+		break;
+	default:
+		mio_log(MIO_ERROR, "Unsupported hint scope!");
+		break;
+	}
+
+	return type;
 }
 
-char* mio_hint_name(enum mio_hint_key key)
+char* mio_hint_name(enum mio_hint_scope scope, int key)
 {
-	if (key < 0 || key >= NKEYS)
-		return NULL;
-	return hint_table[key].h_name;
+	char *name = NULL;
+
+	switch(scope) {
+	case MIO_HINT_SCOPE_OBJ:
+		if (key >= 0 && key < OBJ_NKEYS)
+			name = obj_hint_table[key].h_name;
+		break;
+	case MIO_HINT_SCOPE_SYS:
+		if (key >= 0 && key < SYS_NKEYS)
+			name = sys_hint_table[key].h_name;
+		break;
+	default:
+		mio_log(MIO_ERROR, "Unsupported hint scope!");
+		break;
+	}
+
+	return name;
 }
 
 int mio_hints_init(struct mio_hints *hints)
@@ -206,7 +244,8 @@ static int obj_hint_store(struct mio_obj *obj)
 	nr_hints = obj->mo_hints.mh_map.mhm_nr_set;
 
 	for (i = 0; i < nr_hints; i++)
-		if (mio_hint_type(obj->mo_hints.mh_map.mhm_keys[i]) ==
+		if (mio_hint_type(MIO_HINT_SCOPE_OBJ,
+				  obj->mo_hints.mh_map.mhm_keys[i]) ==
 		    MIO_HINT_PERSISTENT)
 			nr_phints++;
 
@@ -217,7 +256,8 @@ static int obj_hint_store(struct mio_obj *obj)
 		return rc;
 
 	for (i = 0; i < nr_hints; i++) {
-		if (mio_hint_type(obj->mo_hints.mh_map.mhm_keys[i]) ==
+		if (mio_hint_type(MIO_HINT_SCOPE_OBJ,
+				  obj->mo_hints.mh_map.mhm_keys[i]) ==
 		    MIO_HINT_PERSISTENT) {
 			phints->mh_map.mhm_keys[phint_cnt] =
 				obj->mo_hints.mh_map.mhm_keys[i];
@@ -253,6 +293,7 @@ static int obj_hot_index_cal(struct mio_obj *obj)
 	 */
 	hotness = (obj->mo_attrs.moa_stats.mos_rcount +
 		   obj->mo_attrs.moa_stats.mos_wcount);
+	mio_log(MIO_DEBUG, "object hotness = %lu\n", hotness);
 	rc = mio_hint_map_set(&obj->mo_hints.mh_map, MIO_HINT_OBJ_HOT_INDEX, hotness);
 	return rc;
 }
@@ -417,6 +458,28 @@ int mio_obj_hint_get(struct mio_obj *obj, int hint_key, uint64_t *hint_value)
 	return rc;
 }
 
+/**
+ * Set and get system level hints. Currently system hints are session based,
+ * support for persistent system hint will added later.
+ */
+int mio_sys_hint_set(int hint_key, uint64_t hint_value)
+{
+	int rc;
+
+	rc = mio_hint_add(&mio_sys_hints, hint_key, hint_value);
+	if (rc < 0) {
+		mio_log(MIO_ERROR,
+			"Set system hint failed! error = %d\n", rc);
+		return rc;
+	}
+
+	return 0;
+}
+
+int mio_sys_hint_get(int hint_key, uint64_t *hint_value)
+{
+	return mio_hint_lookup(&mio_sys_hints, hint_key, hint_value);
+}
 /*
  *  Local variables:
  *  c-indentation-style: "K&R"
