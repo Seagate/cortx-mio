@@ -442,7 +442,7 @@ static int conf_extract_value(enum conf_key key, char *value)
 		if (slen > MIO_POOL_MAX_NAME_LEN)
 			rc = -EINVAL;
 		else
-			strncpy(pool->mp_name, value, slen + 1);
+			memcpy(pool->mp_name, value, slen + 1);
 		break;
 	case MOTR_POOL_ID:
 		pool = mio_pools.mps_pools + mio_pools.mps_nr_pools - 1;
