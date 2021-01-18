@@ -119,7 +119,7 @@ int kvs_fill_pairs(struct mio_kvs_id *kid, struct mio_kv_pair *pairs,
 		key_str = malloc(klen);
 		if (key_str == NULL)
 			goto error;
-		strncpy(key_str, tmp_str, klen);
+		memcpy(key_str, tmp_str, klen);
 		pairs[i].mkp_klen = klen;
 		pairs[i].mkp_key  = key_str;
 
@@ -131,7 +131,7 @@ int kvs_fill_pairs(struct mio_kvs_id *kid, struct mio_kv_pair *pairs,
 			val_str = malloc(vlen);
 			if (val_str == NULL)
 				goto error;
-			strncpy(val_str, tmp_str, vlen);
+			memcpy(val_str, tmp_str, vlen);
 			pairs[i].mkp_vlen = vlen;
 			pairs[i].mkp_val  = val_str;
 		}

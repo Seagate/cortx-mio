@@ -229,7 +229,6 @@ int mio_cmd_obj_copy(struct mio_obj_id *from_oid, struct mio_obj_id *to_oid,
 	struct mio_iovec *data;
 	struct mio_obj from_obj;
 	struct mio_obj to_obj;
-	struct stat src_stat;
 
 	/* Open `from` object. */
 	memset(&from_obj, 0, sizeof from_obj);
@@ -237,7 +236,6 @@ int mio_cmd_obj_copy(struct mio_obj_id *from_oid, struct mio_obj_id *to_oid,
 	if (rc < 0)
 		goto obj_close;
 	max_index = from_obj.mo_attrs.moa_size;
-	max_index = src_stat.st_size;
 	max_block_count = (max_index - 1) / block_size + 1;
 	block_count = block_count > max_block_count?
 		      max_block_count : block_count;
