@@ -327,7 +327,7 @@ enum {
  */
 struct mio_pool {
 	/** the name by which this layer is referenced by the user */
-	char mp_name[MIO_POOL_MAX_NAME_LEN];
+	char mp_name[MIO_POOL_MAX_NAME_LEN + 1];
 	
 	/** Pool id. */
  	struct mio_pool_id mp_id;
