@@ -8,7 +8,7 @@ build:mio:
   script:
     - git checkout -B "$CI_COMMIT_REF_NAME" "$CI_COMMIT_SHA"
     - autoreconf -ivf
-    - ./configure 
+    - ./configure
     - find . -type d | xargs chmod o+rwx
     # TMPDIR is not set in docker images
     # HOMEDIR is sometimes set to /nonexistent
@@ -21,3 +21,31 @@ build:mio:
       - config.log
       - tests/*.log
       - mio-*.tar.gz
+
+mio_rw_threads:
+  tags: # these are the three tags identifying the group runner on JSC/sage prototype
+    - Group
+    - Maestro
+    - gitlab
+  script:
+    - git checkout -B "$CI_COMMIT_REF_NAME" "$CI_COMMIT_SHA"
+    - autoreconf -ivf
+    - ./configure
+    - find . -type d | xargs chmod o+rwx
+    # TMPDIR is not set in docker images
+    # HOMEDIR is sometimes set to /nonexistent
+    - make
+    - motraddr.sh --mio > mio_config.yaml
+    - cat mio_config.yaml
+    - ../examples/mio_rw_threads -s 4096 -c 1 -n 10 -t 1 -y ./mio_config.yaml -o 1:12346800
+  artifacts:
+    when: always
+    paths:
+      - mio_config.yaml
+      - config.status
+      - config.log
+      - tests/*.log
+      - mio-*.tar.gz
+
+
+
