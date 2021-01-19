@@ -37,7 +37,7 @@ mio_rw_threads:
     - make
     - motraddr.sh --mio > mio_config.yaml
     - cat mio_config.yaml
-    - ../examples/mio_rw_threads -s 4096 -c 1 -n 10 -t 1 -y ./mio_config.yaml -o 1:12346800
+    - examples/mio_rw_threads -s 4096 -c 1 -n 10 -t 1 -y ./mio_config.yaml -o 1:12346800
   artifacts:
     when: always
     paths:
