@@ -88,6 +88,8 @@ struct mio_obj_ops {
 			 int iovcnt, struct mio_op *op);
 	int (*moo_sync)(struct mio_obj *obj, struct mio_op *op);
 	int (*moo_size)(struct mio_obj *obj, struct mio_op *op);
+	int (*moo_pool_id)(const struct mio_obj *obj,
+			   struct mio_pool_id *pool_id);
 
 	/**
 	 * Exclusive whole object (blocking) lock.
@@ -374,6 +376,8 @@ int mio_hint_map_get(struct mio_hint_map *map, int key, uint64_t *value);
 
 bool mio_hint_is_set(struct mio_hints *hints, int hint_key);
 
+int mio_obj_hotness_to_pool_idx(uint64_t hotness);
+
 void *mio_mem_alloc(size_t size);
 void mio_mem_free(void *p);
 void mio_memset(void *p, int c, size_t size);
@@ -386,6 +390,7 @@ uint64_t mio_byteorder_be64_to_cpu(uint64_t big_endian_64bits);
 
 int mio_conf_init(const char *config_file);
 void mio_conf_fini();
+bool mio_conf_default_pool_has_set();
 
 int mio_instance_check();
 

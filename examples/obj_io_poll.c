@@ -220,14 +220,13 @@ dest_close:
  */
 int mio_cmd_obj_copy(struct mio_obj_id *from_oid,
 		     struct mio_pool_id *to_pool, struct mio_obj_id *to_oid,
-		     uint32_t block_size, uint32_t block_count,
-		     struct mio_cmd_obj_hint *chint)
+		     uint32_t block_size, struct mio_cmd_obj_hint *chint)
 {
 	int rc = 0;
 	uint32_t bcount;
 	uint64_t last_index;
 	uint64_t max_index;
-	uint64_t max_block_count;
+	uint64_t block_count;
 	struct mio_iovec *data;
 	struct mio_obj from_obj;
 	struct mio_obj to_obj;
@@ -238,9 +237,7 @@ int mio_cmd_obj_copy(struct mio_obj_id *from_oid,
 	if (rc < 0)
 		goto obj_close;
 	max_index = from_obj.mo_attrs.moa_size;
-	max_block_count = (max_index - 1) / block_size + 1;
-	block_count = block_count > max_block_count?
-		      max_block_count : block_count;
+	block_count = (from_obj.mo_attrs.moa_size - 1) / block_size + 1;
 
 	/* Create the `to` object if it doesn't exist. */
 	memset(&to_obj, 0, sizeof to_obj);

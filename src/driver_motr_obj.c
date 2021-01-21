@@ -61,7 +61,7 @@ static int motr_obj_open_pp(struct mio_op *op)
 
 	/* Launch a new op to get object attributes. */
 	rc = motr_obj_attrs_query(M0_IC_GET, obj,
-			            motr_obj_attrs_get_pp, op);
+			          motr_obj_attrs_get_pp, op);
 	if (rc < 0)
 		return rc;
 	else
@@ -147,6 +147,13 @@ mio__motr_pool_id_to_fid(const struct mio_pool_id *pool_id, struct m0_fid *fid)
 {
 	fid->f_container = pool_id->mpi_hi;
 	fid->f_key = pool_id->mpi_lo;
+}
+
+void
+mio__motr_fid_to_pool_id(const struct m0_fid *fid, struct mio_pool_id *pool_id)
+{
+	pool_id->mpi_hi = fid->f_container;
+	pool_id->mpi_lo = fid->f_key;
 }
 
 static int mio_motr_obj_create(const struct mio_pool_id *pool_id,
@@ -1644,6 +1651,24 @@ static int mio_motr_obj_size(struct mio_obj *obj, struct mio_op *op)
 				      motr_obj_attrs_get_pp, op);
 }
 
+static int
+mio_motr_obj_pool_id(const struct mio_obj *obj, struct mio_pool_id *pool_id)
+{
+        struct m0_obj *cobj = (struct m0_obj *)obj->mo_drv_obj;
+	struct m0_pool_version *pver;
+
+        if (cobj == NULL)
+                return -EINVAL;
+
+	pver = m0_conf_fid_is_valid(&cobj->ob_attr.oa_pver) == false? NULL:
+	       m0_pool_version_find(&mio_motr_instance->m0c_pools_common,
+				    &cobj->ob_attr.oa_pver);
+	if (pver == NULL)
+		return -EINVAL;
+	mio__motr_fid_to_pool_id(&pver->pv_pool->po_id, pool_id);
+	return 0;
+}
+
 static int mio_motr_obj_lock(struct mio_obj *obj)
 {
         int rc = 0;
@@ -1729,6 +1754,7 @@ struct mio_obj_ops mio_motr_obj_ops = {
         .moo_readv        = mio_motr_obj_readv,
         .moo_sync         = mio_motr_obj_sync,
         .moo_size         = mio_motr_obj_size,
+        .moo_pool_id      = mio_motr_obj_pool_id,
         .moo_lock         = mio_motr_obj_lock,
         .moo_unlock       = mio_motr_obj_unlock,
         .moo_hint_store   = mio_motr_obj_hint_store,

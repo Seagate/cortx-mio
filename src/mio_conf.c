@@ -57,6 +57,7 @@ enum conf_key {
 	MOTR_POOL_NAME,
 	MOTR_POOL_ID,
 	MOTR_POOL_TYPE,
+	MOTR_POOL_DEFAULT,
 
 	/* Other drivers such as Ceph defined here. */
 };
@@ -140,6 +141,10 @@ struct conf_entry conf_table[] = {
 		.name = "MOTR_USER_GROUP",
 		.type = MOTR
 	},
+	[MOTR_POOL_DEFAULT] = {
+		.name = "MOTR_POOL_DEFAULT",
+		.type = MOTR
+	},
 	[MOTR_POOLS] = {
 		.name = "MOTR_POOLS",
 		.type = MOTR
@@ -166,6 +171,9 @@ static enum conf_block_sequence conf_which_blk_seq = 0;
 static enum mio_driver_id mio_inst_drv_id;
 static void *mio_driver_confs[MIO_DRIVER_NUM];
 static struct mio_motr_config *motr_conf;
+
+static char *mio_default_pool_null_str = "MIO_DEFAULT_POOL_NULL";
+static char mio_default_pool_name[MIO_POOL_MAX_NAME_LEN + 1];
 struct mio_pools mio_pools;
 
 #define NKEYS (sizeof(conf_table)/sizeof(struct conf_entry))
@@ -436,6 +444,13 @@ static int conf_extract_value(enum conf_key key, char *value)
 	case MOTR_USER_GROUP:
 		rc = conf_copy_str(&motr_conf->mc_motr_group, value);
 		break;
+	case MOTR_POOL_DEFAULT:
+		slen = strlen(value);
+		if (slen > MIO_POOL_MAX_NAME_LEN)
+			rc = -EINVAL;
+		else
+			memcpy(mio_default_pool_name, value, slen + 1);
+		break;
 	case MOTR_POOL_NAME:
 		pool = mio_pools.mps_pools + mio_pools.mps_nr_pools - 1;
 		slen = strlen(value);
@@ -459,9 +474,15 @@ static int conf_extract_value(enum conf_key key, char *value)
 	return rc;
 }
 
+bool mio_conf_default_pool_has_set()
+{
+	return strcmp(mio_default_pool_name, mio_default_pool_null_str);
+}
+
 int mio_conf_init(const char *config_file)
 {
-	int  rc;
+	int i;
+	int rc;
 	FILE *fh;
 	bool is_key = true;
 	enum conf_key key = MIO_CONF_INVALID;
@@ -470,6 +491,10 @@ int mio_conf_init(const char *config_file)
 	yaml_parser_t parser;
 	yaml_token_t token;
 
+	memcpy(mio_default_pool_name,
+	       mio_default_pool_null_str,
+	       strlen(mio_default_pool_null_str) + 1);
+	
 	if (!yaml_parser_initialize(&parser)) {
 		/* MIO logger has not been initialised yet, so use fprintf. */
 		fprintf(stderr, "Failed to initialize parser!\n");
@@ -535,6 +560,24 @@ int mio_conf_init(const char *config_file)
 	mio_instance->m_driver_id = mio_inst_drv_id;
 	mio_instance->m_driver = mio_driver_get(mio_inst_drv_id);
 	mio_instance->m_driver_confs = mio_driver_confs[mio_inst_drv_id];
+
+	/* Set default pool. */
+	if (mio_conf_default_pool_has_set()) {
+		for (i = 0; i < mio_pools.mps_nr_pools; i++) {
+			if (!strcmp(mio_pools.mps_pools[i].mp_name,
+				    mio_default_pool_name))
+				break;
+		}
+		if (i == mio_pools.mps_nr_pools) {
+			rc = -EINVAL;
+			goto exit;
+		}
+
+		mio_pools.mps_default_pool_idx = i;
+		memcpy(mio_pools.mps_default_pool_name,
+	      	       mio_pools.mps_pools[i].mp_name,
+		       MIO_POOL_MAX_NAME_LEN + 1);
+	}
 
 exit:
 	yaml_parser_delete(&parser);

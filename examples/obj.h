@@ -68,8 +68,7 @@ int mio_cmd_obj_read_async(struct mio_obj_id *oid, char *dest,
 
 int mio_cmd_obj_copy(struct mio_obj_id *from_oid,
 		     struct mio_pool_id *to_pool, struct mio_obj_id *to_oid,
-		     uint32_t block_size, uint32_t block_count,
-		     struct mio_cmd_obj_hint *chint);
+		     uint32_t block_size, struct mio_cmd_obj_hint *chint);
 
 int mio_cmd_obj_touch(struct mio_obj_id *oid);
 int mio_cmd_obj_unlink(struct mio_obj_id *id);

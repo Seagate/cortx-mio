@@ -272,7 +272,6 @@ enum {
  * Object attributes stored to and loaded from storage backend.
  */
 struct mio_obj_attrs {
-	struct mio_pool_id moa_pool_id;
 	uint64_t moa_size;
 
 	/**
@@ -320,7 +319,7 @@ enum mio_pool_type {
 
 enum {
 	MIO_POOL_MAX_NAME_LEN = 32,
-	MIO_POOL_MAX_NR_OPT_BLKSIZES = 16
+	MIO_POOL_MAX_NR_OPT_BLKSIZES = 16,
 };
 
 /**
@@ -363,6 +362,9 @@ struct mio_pool {
  * MIO pool information structure.
  */
 struct mio_pools {
+	int mps_default_pool_idx;
+	char mps_default_pool_name[MIO_POOL_MAX_NAME_LEN + 1];
+
         int mps_nr_pools;
         struct mio_pool *mps_pools;
 };
@@ -373,7 +375,7 @@ extern struct mio_pools mio_pools;
  * Return the available space in pool @arg pool_id.
  *
  * Returns a (reasonable approximation to) the free capacity of the given
- * pool in @arg *freespace.
+ * pool in @param *freespace.
  *
  */
 int mio_pool_freespace(const struct mio_pool_id *pool_id,
@@ -386,12 +388,12 @@ int mio_pool_freespace(const struct mio_pool_id *pool_id,
  * User code is not permitted to modify the content of the @arg config
  * result.
  * 
- * @arg *pool_id The pool id.
- * @arg *pools will not be NULL on a successful return. If no
+ * @param *pool_id The pool id.
+ * @param *pools will not be NULL on a successful return. If no
  * pools are configured, this will be visible inside the configinfo
  * structure itself.
  *
- * @arg pools may not be NULL on call.
+ * @param pools may not be NULL on call.
  *
  * @param[out] pool The requested pool.
  * @param[out] pools The list of all pools.
@@ -399,6 +401,17 @@ int mio_pool_freespace(const struct mio_pool_id *pool_id,
  */
 int mio_pool_get(const struct mio_pool_id *pool_id, struct mio_pool **pool);
 int mio_pool_get_all(struct mio_pools **pools);
+
+/**
+ * Return an object's pool id.
+ *
+ * @arg *pool_id The pool id.
+ * @param obj Pointer to the object handle which can be used can be
+ */
+int mio_obj_pool_id(const struct mio_obj *obj, struct mio_pool_id *pool_id);
+
+bool mio_obj_pool_id_cmp(struct mio_pool_id *pool_id1,
+			 struct mio_pool_id *pool_id2);
 
 /**
  * Open an object identified by object identifier oid.
@@ -649,6 +662,8 @@ int mio_hint_lookup(struct mio_hints *hints, int hint_key, uint64_t *hint_value)
 
 enum mio_hint_type mio_hint_type(enum mio_hint_scope scope, int key);
 char* mio_hint_name(enum mio_hint_scope scope, int key);
+
+struct mio_pool_id mio_obj_hotness_to_pool_id(uint64_t hotness);
 
 /**
  * TODO: short description/definition of composite object.
