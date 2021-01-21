@@ -181,16 +181,13 @@ void obj_close(struct mio_obj *obj)
 	mio_obj_close(obj);
 }
 
-int obj_create(struct mio_obj_id *oid,
+int obj_create(struct mio_pool_id *pool, struct mio_obj_id *oid,
 	       struct mio_obj *obj, struct mio_cmd_obj_hint *chint)
 {
 	int rc;
 	struct mio_op op;
 	struct mio_hints hints;
 	struct mio_hints *hints_ptr = NULL;
-
-	memset(&hints, 0, sizeof hints);
-	memset(&op, 0, sizeof op);
 
 	rc = obj_open(oid, obj);
 	if (rc == 0) {
@@ -203,6 +200,7 @@ int obj_create(struct mio_obj_id *oid,
 
 create:
 	if (chint != NULL) {
+		memset(&hints, 0, sizeof hints);
         	mio_hints_init(&hints);
         	rc = mio_hint_add(&hints, chint->co_hkey, chint->co_hvalue);
        		if (rc < 0) {
@@ -215,7 +213,7 @@ create:
 	}
 
 	memset(&op, 0, sizeof op);
-	rc = mio_obj_create(oid, NULL, hints_ptr, obj, &op);
+	rc = mio_obj_create(oid, pool, hints_ptr, obj, &op);
 	if (rc != 0)
 		return rc;
 
@@ -227,16 +225,13 @@ create:
  * Try to open an object first. If it doesn't exist, create
  * a new one.
  */
-int obj_open_or_create(struct mio_obj_id *oid,
+int obj_open_or_create(struct mio_pool_id *pool, struct mio_obj_id *oid,
 		       struct mio_obj *obj, struct mio_cmd_obj_hint *chint)
 {
 	int rc;
 	struct mio_op op;
 	struct mio_hints hints;
 	struct mio_hints *hints_ptr = NULL;
-
-	memset(&hints, 0, sizeof hints);
-	memset(&op, 0, sizeof op);
 
 	rc = obj_open(oid, obj);
 	if (rc == 0)
@@ -248,6 +243,7 @@ int obj_open_or_create(struct mio_obj_id *oid,
 
 create:
 	if (chint != NULL) {
+		memset(&hints, 0, sizeof hints);
      		mio_hints_init(&hints);
         	rc = mio_hint_add(&hints, chint->co_hkey, chint->co_hvalue);
         	if (rc < 0) {
@@ -260,7 +256,7 @@ create:
 	}
 
 	memset(&op, 0, sizeof op);
-	rc = mio_obj_create(oid, NULL, hints_ptr, obj, &op);
+	rc = mio_obj_create(oid, pool, hints_ptr, obj, &op);
 	if (rc != 0)
 		return rc;
 
@@ -287,7 +283,7 @@ int mio_cmd_obj_touch(struct mio_obj_id *oid)
 	struct mio_obj obj;
 
 	memset(&obj, 0, sizeof obj);
-	return obj_create(oid, &obj, NULL);
+	return obj_create(NULL, oid, &obj, NULL);
 }
 
 int mio_cmd_obj_unlink(struct mio_obj_id *oid)

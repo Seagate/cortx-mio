@@ -197,7 +197,8 @@ static void obj_io_async_fini()
 	free(obj_io_ops);
 }
 
-int mio_cmd_obj_write_async(char *src, struct mio_obj_id *oid,
+int mio_cmd_obj_write_async(char *src, struct mio_pool_id *pool,
+			    struct mio_obj_id *oid,
 			    uint32_t block_size, uint32_t block_count)
 {
 	int rc = 0;
@@ -207,9 +208,16 @@ int mio_cmd_obj_write_async(char *src, struct mio_obj_id *oid,
 	uint64_t max_block_count;
 	struct mio_iovec *data;
 	struct mio_obj obj;
-	FILE *fp;
+	FILE *fp = NULL;
 	struct stat src_stat;
 
+	/* If `src` file is not set, use pseudo data. */
+	if (src == NULL) {
+		max_index = block_count * block_size;
+		goto create_obj;
+	}
+
+	/* Open source file */
 	fp = fopen(src, "r");
 	if (fp == NULL)
 		return -errno;
@@ -222,9 +230,10 @@ int mio_cmd_obj_write_async(char *src, struct mio_obj_id *oid,
 	block_count = block_count > max_block_count?
 		      max_block_count : block_count;
 
+create_obj:
 	memset(&obj, 0, sizeof obj);
-	rc = obj_create(oid, &obj, NULL);
-	if (rc < 0 && rc != -EEXIST)
+	rc = obj_open_or_create(pool, oid, &obj, NULL);
+	if (rc < 0)
 		goto src_close;
 
 	rc = obj_io_async_init(block_count);

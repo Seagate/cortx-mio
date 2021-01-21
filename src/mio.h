@@ -272,6 +272,7 @@ enum {
  * Object attributes stored to and loaded from storage backend.
  */
 struct mio_obj_attrs {
+	struct mio_pool_id moa_pool_id;
 	uint64_t moa_size;
 
 	/**

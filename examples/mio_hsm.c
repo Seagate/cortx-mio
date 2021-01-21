@@ -167,7 +167,7 @@ static int hsm_write_objs(int idx, int nr_objs)
 	gettimeofday(&stv, NULL);
 	for (i = idx; i < nr_objs; i++) {
 		hsm_make_oid(&oid, i);
-		rc = mio_cmd_obj_write(NULL, &oid,
+		rc = mio_cmd_obj_write(NULL, NULL, &oid,
 				hsm_params.cop_block_size,
 				hsm_params.cop_block_count);
 		if (rc < 0)
@@ -253,7 +253,7 @@ static int hsm_move_one(struct mio_obj_id *oid)
 
 	/* 1. Create a tmp object and copy data to it. */
 	hsm_make_tmp_oid(&tmp_oid);
-	rc = mio_cmd_obj_copy(oid, &tmp_oid, hsm_params.cop_block_size,
+	rc = mio_cmd_obj_copy(oid, NULL, &tmp_oid, hsm_params.cop_block_size,
 			      hsm_params.cop_block_count, NULL);
 	if (rc < 0)
 		return rc;
@@ -264,7 +264,7 @@ static int hsm_move_one(struct mio_obj_id *oid)
 		return rc;
 
 	/* 3. Create a new object with the same `to` id but in different pool. */
-	rc = mio_cmd_obj_copy(&tmp_oid, oid, hsm_params.cop_block_size,
+	rc = mio_cmd_obj_copy(&tmp_oid, NULL, oid, hsm_params.cop_block_size,
 			      hsm_params.cop_block_count, &chint);
 	if (rc < 0) {
 		fprintf(stderr, "Failed to move object back to new pool!");

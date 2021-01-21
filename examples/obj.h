@@ -53,10 +53,12 @@ int mio_cmd_obj_args_init(int argc, char **argv,
 			  void (*usage)(FILE *, char *));
 void mio_cmd_obj_args_fini(struct mio_cmd_obj_params *params);
 
-int mio_cmd_obj_write(char *src, struct mio_obj_id *oid,
+int mio_cmd_obj_write(char *src, struct mio_pool_id *pool,
+		      struct mio_obj_id *oid,
 		      uint32_t block_size, uint32_t block_count);
 
-int mio_cmd_obj_write_async(char *src, struct mio_obj_id *oid,
+int mio_cmd_obj_write_async(char *src, struct mio_pool_id *pool,
+			    struct mio_obj_id *oid,
 			    uint32_t block_size, uint32_t block_count);
 
 int mio_cmd_obj_read(struct mio_obj_id *oid, char *dest,
@@ -64,7 +66,8 @@ int mio_cmd_obj_read(struct mio_obj_id *oid, char *dest,
 int mio_cmd_obj_read_async(struct mio_obj_id *oid, char *dest,
 			   uint32_t block_size, uint32_t block_count);
 
-int mio_cmd_obj_copy(struct mio_obj_id *from_oid, struct mio_obj_id *to_oid,
+int mio_cmd_obj_copy(struct mio_obj_id *from_oid,
+		     struct mio_pool_id *to_pool, struct mio_obj_id *to_oid,
 		     uint32_t block_size, uint32_t block_count,
 		     struct mio_cmd_obj_hint *chint);
 
@@ -84,9 +87,9 @@ int obj_write_data_to_file(FILE *fp, uint32_t bcount, struct mio_iovec *data);
 
 int obj_open(struct mio_obj_id *oid, struct mio_obj *obj);
 void obj_close(struct mio_obj *obj);
-int obj_create(struct mio_obj_id *oid,
+int obj_create(struct mio_pool_id *pool, struct mio_obj_id *oid,
 	       struct mio_obj *obj, struct mio_cmd_obj_hint *chint);
-int obj_open_or_create(struct mio_obj_id *oid,
+int obj_open_or_create(struct mio_pool_id *pool, struct mio_obj_id *oid,
 		       struct mio_obj *obj, struct mio_cmd_obj_hint *chint);
 int obj_rm(struct mio_obj_id *oid);
 

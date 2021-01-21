@@ -144,7 +144,7 @@ static int obj_hotness(struct mio_obj_id *oid)
 	int rc;
 
 	/* 1. Create and write a new object. */
-	rc = mio_cmd_obj_write(src_fname, oid,
+	rc = mio_cmd_obj_write(src_fname, NULL, oid,
 			       obj_hint_params.cop_block_size,
 			       obj_hint_params.cop_block_count);
 	if (rc < 0) {
@@ -161,7 +161,8 @@ static int obj_hotness(struct mio_obj_id *oid)
 
 	/* 2. Simulate a workload of intensive WRITE. */
 	for (i = 0; i < 16; i++) {
-		rc = mio_cmd_obj_write(src_fname, &obj_hint_params.cop_oid,
+		rc = mio_cmd_obj_write(src_fname, NULL,
+				       &obj_hint_params.cop_oid,
 				       obj_hint_params.cop_block_size,
 				       obj_hint_params.cop_block_count);
 		if (rc < 0)
