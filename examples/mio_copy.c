@@ -27,7 +27,8 @@ static void copy_usage(FILE *file, char *prog_name)
 				 "suffix b/k/m/g/K/M/G\n"
 "  -p, --pool           POOL_ID   Specify which pool the object is created\n"
 "  -a, --async_mode               Set to async IO mode\n"
-"  -y, --mio-conf-file            MIO YAML configuration file\n"
+"  -l, --async_step               Set the number of blocks for each op in async mode\n"
+"  -y, --mio_conf_file            MIO YAML configuration file\n"
 "  -h, --help                     shows this help text and exit\n"
 , prog_name);
 }
@@ -64,7 +65,8 @@ int main(int argc, char **argv)
 				     &copy_params.cop_pool_id,
 				     &copy_params.cop_oid,
 				     copy_params.cop_block_size,
-				     copy_params.cop_block_count) :
+				     copy_params.cop_block_count,
+				     copy_params.cop_async_step) :
 	     mio_cmd_obj_write(src_fname,
 			       &copy_params.cop_pool_id,
 			       &copy_params.cop_oid,

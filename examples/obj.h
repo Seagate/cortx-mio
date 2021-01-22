@@ -31,12 +31,14 @@ struct mio_cmd_obj_params {
 
 	struct mio_pool_id cop_pool_id;
 
+	int cop_io_type;
 	struct mio_obj_id cop_oid;
 	int cop_nr_objs;
 	uint64_t cop_block_size;
 	uint64_t cop_block_count;
 
 	bool cop_async_mode;
+	uint64_t cop_async_step; /* how many blocks for each op.*/
 
 	int cop_nr_threads;
 };
@@ -59,12 +61,14 @@ int mio_cmd_obj_write(char *src, struct mio_pool_id *pool,
 
 int mio_cmd_obj_write_async(char *src, struct mio_pool_id *pool,
 			    struct mio_obj_id *oid,
-			    uint32_t block_size, uint32_t block_count);
+			    uint32_t block_size, uint32_t block_count,
+			    uint32_t async_step);
 
 int mio_cmd_obj_read(struct mio_obj_id *oid, char *dest,
 		     uint32_t block_size, uint32_t block_count);
 int mio_cmd_obj_read_async(struct mio_obj_id *oid, char *dest,
-			   uint32_t block_size, uint32_t block_count);
+			   uint32_t block_size, uint32_t block_count,
+			   uint32_t async_step);
 
 int mio_cmd_obj_copy(struct mio_obj_id *from_oid,
 		     struct mio_pool_id *to_pool, struct mio_obj_id *to_oid,

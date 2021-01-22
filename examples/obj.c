@@ -314,6 +314,8 @@ int mio_cmd_obj_args_init(int argc, char **argv,
 				{"block-size",  required_argument, NULL, 's'},
 				{"block-count", required_argument, NULL, 'c'},
 				{"nr_objs",     required_argument, NULL, 'n'},
+				{"io_type",     required_argument, NULL, 'i'},
+				{"async_len",   required_argument, NULL, 'l'},
 				{"async_mod",   no_argument,       NULL, 'a'},
 				{"console",     no_argument,       NULL, 'v'},
 				{"mio_conf",    required_argument, NULL, 'y'},
@@ -325,8 +327,9 @@ int mio_cmd_obj_args_init(int argc, char **argv,
 	params->cop_block_size = 4096;
 	params->cop_block_count = ~0ULL;
 	params->cop_async_mode = false;
+	params->cop_async_step = MIO_CMD_MAX_BLOCK_COUNT_PER_OP;
 
-	while ((v = getopt_long(argc, argv, ":p:o:s:c:n:y:t:avh", l_opts,
+	while ((v = getopt_long(argc, argv, ":p:o:s:c:n:i:l:y:t:avh", l_opts,
 				&option_index)) != -1)
 	{
 		switch (v) {
@@ -348,6 +351,14 @@ int mio_cmd_obj_args_init(int argc, char **argv,
 			continue;
 		case 'n':
 			params->cop_nr_objs = atoi(optarg);
+			continue;
+		case 'i':
+			params->cop_io_type = atoi(optarg);
+			continue;
+		case 'l':
+			rc = mio_cmd_strtou64(optarg, &params->cop_async_step);
+			if (rc < 0)
+				exit(EXIT_FAILURE);
 			continue;
 		case 't':
 			params->cop_nr_threads = atoi(optarg);
