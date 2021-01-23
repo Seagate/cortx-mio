@@ -345,6 +345,13 @@ struct mio_motr_config {
 	int mc_unit_size;
 	int mc_default_layout_id;
 
+	/**
+ 	 * Due to motr's BE limitation, if a request send too much data to
+ 	 * service, an -E2BIG is returned. Set this parameter to limit
+ 	 * the IO size sent to each device.
+ 	 */
+	uint64_t mc_max_iosize_per_dev;
+
 	/*
  	 * Motr user group.
  	 */

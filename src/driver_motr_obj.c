@@ -81,7 +81,7 @@ static int mio_motr_obj_open(struct mio_obj *obj, struct mio_op *op)
 
 	mio__obj_id_to_uint128(&obj->mo_id, &id128);
 	m0_obj_init(cobj, &mio_motr_container.co_realm, &id128,
-			   mio_motr_inst_confs->mc_default_layout_id);
+			   mio_drv_motr_conf->mc_default_layout_id);
 	rc = m0_entity_open(&cobj->ob_entity, &cops[0]);
 	if (rc != 0)
 		goto error;
@@ -177,7 +177,7 @@ static int mio_motr_obj_create(const struct mio_pool_id *pool_id,
 
 	mio__obj_id_to_uint128(&obj->mo_id, &id128);
 	m0_obj_init(cobj, &mio_motr_container.co_realm, &id128,
-			   mio_motr_inst_confs->mc_default_layout_id);
+			   mio_drv_motr_conf->mc_default_layout_id);
 	rc = m0_entity_create(ptr_pfid, &cobj->ob_entity, &cops[0]);
 	if (rc < 0)
 		goto error;
@@ -284,7 +284,7 @@ mio_motr_obj_delete(const struct mio_obj_id *oid, struct mio_op *op)
 
 	mio__obj_id_to_uint128(&mobj->mo_id, &id128);
 	m0_obj_init(cobj, &mio_motr_container.co_realm, &id128,
-			   mio_motr_inst_confs->mc_default_layout_id);
+			   mio_drv_motr_conf->mc_default_layout_id);
 	rc = m0_entity_open(&cobj->ob_entity, &cops[0]);
 	if (rc != 0) {
 		mio_log(MIO_ERROR,
@@ -366,33 +366,45 @@ static int motr_obj_io_pagesize(struct mio_obj *obj)
 	return 1<<cobj->ob_attr.oa_bshift;
 }
 
-static uint64_t
-motr_obj_max_size_per_op(struct mio_obj *obj)
+static int 
+motr_obj_max_size_per_op(struct mio_obj *obj, uint64_t *max_size_per_op)
 {
-	uint64_t unit_size;
-	uint64_t max_size_per_op;
-	struct m0_obj *cobj;
+        struct m0_obj *cobj;
+	struct m0_pool_version *pver;
+	struct m0_pdclust_attr *pa;
+	struct mio_motr_config *motr_config;
 
-	cobj = (struct m0_obj *)obj->mo_drv_obj;
-	unit_size = m0_obj_layout_id_to_unit_size(
-					cobj->ob_attr.oa_layout_id);
-	max_size_per_op = unit_size * MIO_MOTR_RW_MAX_UNITS_PER_OP;
+	motr_config = (struct mio_motr_config *)mio_instance->m_driver_confs;
+        cobj = (struct m0_obj *)obj->mo_drv_obj;
+        if (motr_config == NULL || cobj == NULL)
+                return -EINVAL;
 
-	return max_size_per_op;
+	pver = m0_conf_fid_is_valid(&cobj->ob_attr.oa_pver) == false? NULL:
+	       m0_pool_version_find(&mio_motr_instance->m0c_pools_common,
+				    &cobj->ob_attr.oa_pver);
+	if (pver == NULL)
+		return -EINVAL;
+	pa = &pver->pv_attr;
+	*max_size_per_op = motr_config->mc_max_iosize_per_dev * pa->pa_P; 
+	return 0;
 }
 
-static void
+static int 
 motr_obj_rw_args_estimate_iovcnts(struct mio_obj *obj, int iovcnt,
 				    const struct mio_iovec *iovs,
 				    int *aligned_iovcnt, int *dc_iovcnt)
 {
 	int i;
+	int rc = 0;
 	int dc_cnt = 0;
 	int aligned_cnt = 0;
 	uint64_t len;
 	uint64_t max_size_per_op;
 
-	max_size_per_op = motr_obj_max_size_per_op(obj);
+	rc = motr_obj_max_size_per_op(obj, &max_size_per_op);
+	if (rc < 0)
+		return rc;
+
 	for (i = 0; i < iovcnt; i++) {
 		len = iovs[i].miov_len;
 
@@ -402,6 +414,7 @@ motr_obj_rw_args_estimate_iovcnts(struct mio_obj *obj, int iovcnt,
 	}
 	*aligned_iovcnt = aligned_cnt;
 	*dc_iovcnt = dc_cnt;
+	return 0;
 }
 
 static void motr_obj_rw_args_free(struct motr_obj_rw_args *args)
@@ -424,6 +437,7 @@ static struct motr_obj_rw_args*
 motr_obj_rw_args_alloc(struct mio_obj *obj, int iovcnt,
 			 const struct mio_iovec *iovs)
 {
+	int rc;
 	int dc_iovcnt = 0;
 	int aligned_iovcnt = 0;
 	struct motr_obj_rw_args *args;
@@ -441,8 +455,10 @@ motr_obj_rw_args_alloc(struct mio_obj *obj, int iovcnt,
 	if (args->rwa_sorted_iovs == NULL)
 		goto error;
 
-	motr_obj_rw_args_estimate_iovcnts(
+	rc = motr_obj_rw_args_estimate_iovcnts(
 		obj, iovcnt, iovs, &aligned_iovcnt, &dc_iovcnt);
+	if (rc < 0)
+		goto error;
 
 	args->rwa_aligned_iovs =
 		mio_mem_alloc(aligned_iovcnt * sizeof(struct mio_iovec));
@@ -649,6 +665,7 @@ static int
 motr_obj_iovec_clone(struct motr_obj_rw_args *args, uint64_t off,
 		       uint64_t len, char *base)
 {
+	int rc;
 	uint64_t off1;
 	uint64_t len1;
 	uint64_t len_left;
@@ -657,7 +674,10 @@ motr_obj_iovec_clone(struct motr_obj_rw_args *args, uint64_t off,
 	uint64_t max_size_per_op;
 	struct mio_iovec *aligned_iov;
 
-	max_size_per_op = motr_obj_max_size_per_op(args->rwa_obj);
+	rc = motr_obj_max_size_per_op(args->rwa_obj, &max_size_per_op);
+	if (rc < 0)
+		return rc;
+
 	pagesize = motr_obj_io_pagesize(args->rwa_obj);
 	if (off % pagesize != 0 || len % pagesize != 0)
 		return -EINVAL;
@@ -1087,12 +1107,15 @@ motr_obj_rw_aligned(struct mio_obj *obj, struct mio_iovec *iovs,
 		      struct motr_obj_rw_args *op_pp_args, struct mio_op *op)
 {
 	int i;
+	int rc;
 	int iovcnt_to_rw = 0;
 	uint64_t io_size = 0;
 	uint64_t max_size_per_op;
 	struct mio_iovec *st_iov;
 
-	max_size_per_op = motr_obj_max_size_per_op(obj);
+	rc = motr_obj_max_size_per_op(obj, &max_size_per_op);
+	if (rc < 0)
+		return rc;
 
 	st_iov = iovs + (*iov_cursor);
 	for (i = *iov_cursor; i < iovcnt; i++) {

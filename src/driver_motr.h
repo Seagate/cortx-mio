@@ -33,13 +33,9 @@
 #define MIO_MOTR_OP(op) \
 	((struct m0_op *)op->mop_drv_op_chain.mdoc_head->mdo_op)
 
-enum {
-	MIO_MOTR_RW_MAX_UNITS_PER_OP = 128
-};
-
 extern struct m0_client *mio_motr_instance;
 extern struct m0_container mio_motr_container;
-extern struct mio_motr_config *mio_motr_inst_confs;
+extern struct mio_motr_config *mio_drv_motr_conf;
 
 extern struct m0_uint128 mio_motr_obj_md_kvs_id;
 extern struct m0_fid mio_motr_obj_md_kvs_fid;

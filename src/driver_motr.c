@@ -23,8 +23,8 @@
 
 struct m0_client *mio_motr_instance;
 struct m0_container mio_motr_container;
-struct m0_config mio_motr_conf;
-struct mio_motr_config *mio_motr_inst_confs;
+struct m0_config mio_motr_inst_conf;
+struct mio_motr_config *mio_drv_motr_conf;
 
 struct m0_uint128 mio_motr_obj_md_kvs_id;
 struct m0_fid mio_motr_obj_md_kvs_fid = M0_FID_TINIT('x', 0, 0x10);
@@ -136,27 +136,27 @@ int mio_motr_init(struct mio *mio_inst)
 	struct m0_idx_dix_config dix_conf;
 
 	drv = (struct mio_motr_config *)mio_inst->m_driver_confs;
-	mio_motr_inst_confs = drv;
+	mio_drv_motr_conf = drv;
 
 	/* Set motr configuration parameters. */
-	mio_motr_conf.mc_is_oostore            = drv->mc_is_oostore;
-	mio_motr_conf.mc_is_read_verify        = drv->mc_is_read_verify;
-	mio_motr_conf.mc_local_addr            = drv->mc_motr_local_addr;
-	mio_motr_conf.mc_ha_addr               = drv->mc_ha_addr;
-	mio_motr_conf.mc_profile               = drv->mc_profile;
-	mio_motr_conf.mc_process_fid           = drv->mc_process_fid;
-	mio_motr_conf.mc_tm_recv_queue_min_len = drv->mc_tm_recv_queue_min_len;
-	mio_motr_conf.mc_max_rpc_msg_size      = drv->mc_max_rpc_msg_size;
+	mio_motr_inst_conf.mc_is_oostore            = drv->mc_is_oostore;
+	mio_motr_inst_conf.mc_is_read_verify        = drv->mc_is_read_verify;
+	mio_motr_inst_conf.mc_local_addr            = drv->mc_motr_local_addr;
+	mio_motr_inst_conf.mc_ha_addr               = drv->mc_ha_addr;
+	mio_motr_inst_conf.mc_profile               = drv->mc_profile;
+	mio_motr_inst_conf.mc_process_fid           = drv->mc_process_fid;
+	mio_motr_inst_conf.mc_tm_recv_queue_min_len = drv->mc_tm_recv_queue_min_len;
+	mio_motr_inst_conf.mc_max_rpc_msg_size      = drv->mc_max_rpc_msg_size;
 
-	mio_motr_conf.mc_layout_id =
+	mio_motr_inst_conf.mc_layout_id =
 		m0_obj_unit_size_to_layout_id(drv->mc_unit_size);
 
-	mio_motr_conf.mc_idx_service_id   = M0_IDX_DIX;
+	mio_motr_inst_conf.mc_idx_service_id   = M0_IDX_DIX;
 	dix_conf.kc_create_meta = false;
-	mio_motr_conf.mc_idx_service_conf = &dix_conf;
+	mio_motr_inst_conf.mc_idx_service_conf = &dix_conf;
 
 	/* Initial motr instance. */
-	rc = m0_client_init(&mio_motr_instance, &mio_motr_conf, true);
+	rc = m0_client_init(&mio_motr_instance, &mio_motr_inst_conf, true);
 	if (rc != 0)
 		return rc;
 
