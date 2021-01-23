@@ -19,8 +19,8 @@
 
 bool print_on_console = false;
 
-int obj_alloc_iovecs(struct mio_iovec **data, uint32_t bcount,
-		     uint32_t bsize, uint64_t offset, uint64_t max_offset)
+int obj_alloc_iovecs(struct mio_iovec **data, uint64_t bcount,
+		     uint64_t bsize, uint64_t offset, uint64_t max_offset)
 {
 	int i;
 	int rc;
@@ -58,7 +58,7 @@ void obj_cleanup_iovecs(struct mio_iovec *data)
 	mio_mem_free(data);
 }
 
-int obj_read_data_from_file(FILE *fp, uint32_t bcount, uint32_t bsize,
+int obj_read_data_from_file(FILE *fp, uint64_t bcount, uint64_t bsize,
 			    struct mio_iovec *data)
 {
 	int i;
@@ -82,7 +82,7 @@ int obj_read_data_from_file(FILE *fp, uint32_t bcount, uint32_t bsize,
 	return i;
 }
 
-int obj_write_data_to_file(FILE *fp, uint32_t bcount, struct mio_iovec *data)
+int obj_write_data_to_file(FILE *fp, uint64_t bcount, struct mio_iovec *data)
 {
 	int i = 0;
 	int j;

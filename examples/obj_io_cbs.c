@@ -59,7 +59,7 @@ void obj_write_cb(struct mio_op *op)
 }
 
 static int obj_write_async(struct mio_obj *obj, int op_idx,
-			   uint32_t bcount, struct mio_iovec *data)
+			   uint64_t bcount, struct mio_iovec *data)
 {
 	int rc;
 	struct mio_op *op;
@@ -117,7 +117,7 @@ void obj_read_cb(struct mio_op *op)
 
 static int
 obj_read_async(struct mio_obj *obj, FILE *write_to_fp,
-	       int op_idx, uint32_t bcount, struct mio_iovec *data)
+	       int op_idx, uint64_t bcount, struct mio_iovec *data)
 {
 	int rc;
 	struct mio_op *op;
@@ -179,11 +179,11 @@ static void obj_io_async_fini()
 
 int mio_cmd_obj_write_async(char *src, struct mio_pool_id *pool,
 			    struct mio_obj_id *oid,
-			    uint32_t block_size, uint32_t block_count,
-			    uint32_t async_step)
+			    uint64_t block_size, uint64_t block_count,
+			    uint64_t async_step)
 {
 	int rc = 0;
-	uint32_t bcount;
+	uint64_t bcount;
 	uint64_t last_index;
 	uint64_t max_index;
 	uint64_t max_block_count;
@@ -267,11 +267,11 @@ src_close:
 }
 
 int mio_cmd_obj_read_async(struct mio_obj_id *oid, char *dest,
-			   uint32_t block_size, uint32_t block_count,
-			   uint32_t async_step)
+			   uint64_t block_size, uint64_t block_count,
+			   uint64_t async_step)
 {
 	int rc = 0;
-	uint32_t bcount;
+	uint64_t bcount;
 	uint64_t last_index;
 	uint64_t max_index;
 	uint64_t max_block_count;

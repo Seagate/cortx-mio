@@ -29,8 +29,8 @@ struct iob_worker_info {
 	/* IO arguments. */
 	struct mio_obj *iwi_obj;
 	uint64_t iwi_offset;
-	uint32_t iwi_block_size;
-	uint32_t iwi_block_count;
+	uint64_t iwi_block_size;
+	uint64_t iwi_block_count;
 
 	int iwi_rc;
 	struct timeval iwi_io_stime;
@@ -61,7 +61,7 @@ static void iob_usage(FILE *file, char *prog_name)
 }
 
 static void
-iob_cal_bw(uint32_t block_size, uint32_t block_count,
+iob_cal_bw(uint64_t block_size, uint64_t block_count,
 	   struct timeval stv, struct timeval etv,
 	   double *time_in_sec, double *bw, bool *is_mb)
 {
@@ -108,12 +108,12 @@ static void iob_thread_report(struct iob_worker_info *res, bool is_total)
 }
 
 static void
-iob_generate_data(uint32_t bcount, uint32_t bsize,
+iob_generate_data(uint64_t bcount, uint64_t bsize,
 		  struct mio_iovec *data)
 {
 	int i;
 	int j;
-	uint32_t rand;
+	uint64_t rand;
 	char *ptr;
 
 	for (i = 0; i < bcount; i++) {
@@ -128,10 +128,10 @@ iob_generate_data(uint32_t bcount, uint32_t bsize,
 
 static int
 iob_obj_write(struct mio_obj *obj, uint64_t offset, 
-	      uint32_t block_size, uint32_t block_count)
+	      uint64_t block_size, uint64_t block_count)
 {
 	int rc = 0;
-	uint32_t bcount;
+	uint64_t bcount;
 	uint64_t last_index;
 	uint64_t max_index;
 	struct mio_iovec *data;
@@ -163,10 +163,10 @@ iob_obj_write(struct mio_obj *obj, uint64_t offset,
 }
 
 static int
-iob_obj_read(struct mio_obj *obj, uint32_t block_size, uint32_t block_count)
+iob_obj_read(struct mio_obj *obj, uint64_t block_size, uint64_t block_count)
 {
 	int rc = 0;
-	uint32_t bcount;
+	uint64_t bcount;
 	uint64_t last_index;
 	uint64_t max_index;
 	struct mio_iovec *data;
@@ -246,12 +246,12 @@ enum iob_io_type {
 
 static int
 iob_threads_start(int nr_threads, enum iob_io_type iotype, struct mio_obj *obj,
-		   uint32_t block_size, uint32_t block_count)
+		   uint64_t block_size, uint64_t block_count)
 {
 	int i;
 	int rc = 0;
-	uint32_t blk_cnt_left;
-	uint32_t blk_cnt_per_thread;
+	uint64_t blk_cnt_left;
+	uint64_t blk_cnt_per_thread;
 	struct iob_worker_info *args;
 
 	iob_threads = malloc(nr_threads * sizeof(*iob_threads));
