@@ -366,27 +366,29 @@ static int motr_obj_io_pagesize(struct mio_obj *obj)
 	return 1<<cobj->ob_attr.oa_bshift;
 }
 
-static int 
+static int
 motr_obj_max_size_per_op(struct mio_obj *obj, uint64_t *max_size_per_op)
 {
         struct m0_obj *cobj;
-	struct m0_pool_version *pver;
-	struct m0_pdclust_attr *pa;
-	struct mio_motr_config *motr_config;
+        struct m0_pool_version *pver;
+        struct m0_pdclust_attr *pa;
+        struct mio_motr_config *motr_config;
 
-	motr_config = (struct mio_motr_config *)mio_instance->m_driver_confs;
+        motr_config = (struct mio_motr_config *)mio_instance->m_driver_confs;
         cobj = (struct m0_obj *)obj->mo_drv_obj;
         if (motr_config == NULL || cobj == NULL)
                 return -EINVAL;
 
-	pver = m0_conf_fid_is_valid(&cobj->ob_attr.oa_pver) == false? NULL:
-	       m0_pool_version_find(&mio_motr_instance->m0c_pools_common,
-				    &cobj->ob_attr.oa_pver);
-	if (pver == NULL)
-		return -EINVAL;
-	pa = &pver->pv_attr;
-	*max_size_per_op = motr_config->mc_max_iosize_per_dev * pa->pa_P; 
-	return 0;
+        pver = m0_conf_fid_is_valid(&cobj->ob_attr.oa_pver) == false? NULL:
+               m0_pool_version_find(&mio_motr_instance->m0c_pools_common,
+                                    &cobj->ob_attr.oa_pver);
+        if (pver == NULL)
+                return -EINVAL;
+        pa = &pver->pv_attr;
+        *max_size_per_op =
+                motr_config->mc_max_iosize_per_dev * pa->pa_N *
+                pa->pa_P / (pa->pa_N + pa->pa_K);
+        return 0;
 }
 
 static int 
