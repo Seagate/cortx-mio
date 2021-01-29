@@ -64,7 +64,8 @@ int obj_read(struct mio_obj *obj, uint32_t bcount, struct mio_iovec *data)
 /*
  * Create an object and copy data from a file to the newly created object.
  */
-int mio_cmd_obj_write(char *src, struct mio_obj_id *oid,
+int mio_cmd_obj_write(char *src, struct mio_pool_id *pool,
+		      struct mio_obj_id *oid,
 		      uint32_t block_size, uint32_t block_count)
 {
 	int rc = 0;
@@ -99,7 +100,7 @@ int mio_cmd_obj_write(char *src, struct mio_obj_id *oid,
 create_obj:
 	/* Create the target object if it doesn't exist. */
 	memset(&obj, 0, sizeof obj);
-	rc = obj_open_or_create(oid, &obj, NULL);
+	rc = obj_open_or_create(pool, oid, &obj, NULL);
 	if (rc < 0)
 		goto src_close;
 
@@ -217,15 +218,15 @@ dest_close:
  * MIO's hint such as MIO_HINT_OBJ_OBJ_WHERE or MIO_HINT_OBJ_HOT_INDEX
  * to create an object in a specified pool.
  */
-int mio_cmd_obj_copy(struct mio_obj_id *from_oid, struct mio_obj_id *to_oid,
-		     uint32_t block_size, uint32_t block_count,
-		     struct mio_cmd_obj_hint *chint)
+int mio_cmd_obj_copy(struct mio_obj_id *from_oid,
+		     struct mio_pool_id *to_pool, struct mio_obj_id *to_oid,
+		     uint32_t block_size, struct mio_cmd_obj_hint *chint)
 {
 	int rc = 0;
 	uint32_t bcount;
 	uint64_t last_index;
 	uint64_t max_index;
-	uint64_t max_block_count;
+	uint64_t block_count;
 	struct mio_iovec *data;
 	struct mio_obj from_obj;
 	struct mio_obj to_obj;
@@ -236,13 +237,11 @@ int mio_cmd_obj_copy(struct mio_obj_id *from_oid, struct mio_obj_id *to_oid,
 	if (rc < 0)
 		goto obj_close;
 	max_index = from_obj.mo_attrs.moa_size;
-	max_block_count = (max_index - 1) / block_size + 1;
-	block_count = block_count > max_block_count?
-		      max_block_count : block_count;
+	block_count = (from_obj.mo_attrs.moa_size - 1) / block_size + 1;
 
 	/* Create the `to` object if it doesn't exist. */
 	memset(&to_obj, 0, sizeof to_obj);
-	rc = obj_open_or_create(to_oid, &to_obj, chint);
+	rc = obj_open_or_create(to_pool, to_oid, &to_obj, chint);
 	if (rc < 0)
 		goto obj_close;
 

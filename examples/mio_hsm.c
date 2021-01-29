@@ -31,6 +31,7 @@ enum hsm_action {
 	HSM_WRITE,
 	HSM_READ,
 	HSM_MOVE,
+	HSM_SHOW,
 	HSM_WORKLOAD,
 	HSM_SET_HOT_OBJ_THLD,
 	HSM_SET_COLD_OBJ_THLD,
@@ -51,15 +52,15 @@ static void hsm_usage(FILE *file, char *prog_name)
 "  -c, --block-count    INT       number of blocks to copy, can give with " \
 				 "suffix b/k/m/g/K/M/G\n"
 "  -n                   INT       The number of objects\n"
-"  -a, --async_mode               Set to async IO mode\n"
 "  -y, --mio_conf_file            MIO YAML configuration file\n"
 "  -h, --help                     shows this help text and exit\n"
 "\n"
 " actions:\n"
 "    create \n"
-"    write <index> <number of objects>\n"
-"    read <index> <number of objects>\n"
+"    write <index> <number of objects> <number of blocks>\n"
+"    read <index> <number of objects> <number of blocks>\n"
 "    move <index> <number of objects> \n"
+"    show <index> <number of objects> \n"
 "    set_hot_thld <hot object threshold> \n"
 "    set_cold_thld <cold object threshold> \n"
 "    get_thlds \n"
@@ -72,9 +73,10 @@ static void hsm_action_usage()
 	fprintf(stderr,
 " actions:\n"
 "    create \n"
-"    write <index> <number of objects>\n"
-"    read <index> <number of objects>\n"
+"    write <index> <number of objects> <number of blocks>\n"
+"    read <index> <number of objects> <number of blocks>\n"
 "    move <index> <number of objects> \n"
+"    show <index> <number of objects> \n"
 "    set_hot_thld <hot object threshold> \n"
 "    set_cold_thld <cold object threshold> \n"
 "    get_thlds \n"
@@ -149,7 +151,7 @@ static int hsm_create_objs()
 	return rc;
 }
 
-static int hsm_write_objs(int idx, int nr_objs)
+static int hsm_write_objs(int idx, int nr_objs, int blk_cnt)
 {
 	int i;
 	int rc;
@@ -165,11 +167,10 @@ static int hsm_write_objs(int idx, int nr_objs)
 		nr_objs = hsm_params.cop_nr_objs - idx;
 
 	gettimeofday(&stv, NULL);
-	for (i = idx; i < nr_objs; i++) {
+	for (i = idx; i < idx + nr_objs; i++) {
 		hsm_make_oid(&oid, i);
-		rc = mio_cmd_obj_write(NULL, &oid,
-				hsm_params.cop_block_size,
-				hsm_params.cop_block_count);
+		rc = mio_cmd_obj_write(NULL, NULL, &oid,
+				hsm_params.cop_block_size, blk_cnt);
 		if (rc < 0)
 			break;
 	}
@@ -182,7 +183,7 @@ static int hsm_write_objs(int idx, int nr_objs)
 	return rc;
 }
 
-static int hsm_read_objs(int idx, int nr_objs)
+static int hsm_read_objs(int idx, int nr_objs, int blk_cnt)
 {
 	int i;
 	int rc;
@@ -200,8 +201,8 @@ static int hsm_read_objs(int idx, int nr_objs)
 	gettimeofday(&stv, NULL);
 	for (i = idx; i < nr_objs; i++) {
 		hsm_make_oid(&oid, i);
-		rc = mio_cmd_obj_read(&oid, hsm_log, hsm_params.cop_block_size,
-				      hsm_params.cop_block_count);
+		rc = mio_cmd_obj_read(&oid, hsm_log,
+				      hsm_params.cop_block_size, blk_cnt);
 		if (rc < 0)
 			break;
 	}
@@ -235,6 +236,47 @@ hsm_obj_hint_stat(struct mio_obj_id *oid, struct mio_cmd_obj_hint *chint)
         return rc;
 }
 
+static int
+hsm_obj_pool_id(struct mio_obj_id *oid, struct mio_pool_id *pool_id)
+{
+        int rc;
+        struct mio_obj obj;
+
+        memset(&obj, 0, sizeof obj);
+        rc = mio_cmd_obj_open(oid, &obj);
+        if (rc < 0)
+                return rc;
+
+	rc = mio_obj_pool_id(&obj, pool_id);
+        mio_cmd_obj_close(&obj);
+        return rc;
+}
+
+enum {
+	HSM_OBJ_MOVE = 0,
+	HSM_OBJ_NOT_MOVE = 1,
+};
+
+static int
+hsm_obj_if_move(struct mio_obj_id *oid, uint64_t hotness)
+{
+        int rc;
+	struct mio_pool_id pool_id;
+	struct mio_pool_id new_pool_id;
+
+	rc = hsm_obj_pool_id(oid, &pool_id);
+	if (rc < 0)
+		return rc;
+
+	new_pool_id = mio_obj_hotness_to_pool_id(hotness);
+	if (mio_obj_pool_id_cmp(&pool_id, &new_pool_id))
+		rc = HSM_OBJ_NOT_MOVE;
+	else
+		rc = HSM_OBJ_MOVE;
+
+        return rc;
+}
+
 static int hsm_move_one(struct mio_obj_id *oid)
 {
 	int rc;
@@ -242,8 +284,9 @@ static int hsm_move_one(struct mio_obj_id *oid)
 	struct mio_cmd_obj_hint chint;
 
 	/*
-	 * 0. Get the hotness of the object. Then use it as hint for
-	 *    the new object which the old object is moved to.
+	 * 0. Get the hotness of the object. Then use it to check which
+	 * pool the old object is moved to. If the pool doesn't change,
+	 * skip moving data and return.
 	 */
 	memset(&chint, 0, sizeof(chint));
 	chint.co_hkey = MIO_HINT_OBJ_HOT_INDEX;
@@ -251,10 +294,15 @@ static int hsm_move_one(struct mio_obj_id *oid)
 	if (rc < 0)
 		return rc;
 
+	if (hsm_obj_if_move(oid, chint.co_hvalue) == HSM_OBJ_NOT_MOVE) {
+		printf("Object stays in the same pool, not moving :)\n");
+		return 0;
+	}
+
 	/* 1. Create a tmp object and copy data to it. */
 	hsm_make_tmp_oid(&tmp_oid);
-	rc = mio_cmd_obj_copy(oid, &tmp_oid, hsm_params.cop_block_size,
-			      hsm_params.cop_block_count, NULL);
+	rc = mio_cmd_obj_copy(oid, NULL, &tmp_oid,
+			      hsm_params.cop_block_size, NULL);
 	if (rc < 0)
 		return rc;
 
@@ -264,8 +312,8 @@ static int hsm_move_one(struct mio_obj_id *oid)
 		return rc;
 
 	/* 3. Create a new object with the same `to` id but in different pool. */
-	rc = mio_cmd_obj_copy(&tmp_oid, oid, hsm_params.cop_block_size,
-			      hsm_params.cop_block_count, &chint);
+	rc = mio_cmd_obj_copy(&tmp_oid, NULL, oid,
+			      hsm_params.cop_block_size, &chint);
 	if (rc < 0) {
 		fprintf(stderr, "Failed to move object back to new pool!");
 		return rc;
@@ -278,7 +326,7 @@ static int hsm_move_one(struct mio_obj_id *oid)
 static int hsm_move_objs(int idx, int nr_objs)
 {
 	int i;
-	int rc;
+	int rc = 0;
 	struct mio_obj_id oid;
 
 	if (idx >= hsm_params.cop_nr_objs)
@@ -297,6 +345,35 @@ static int hsm_move_objs(int idx, int nr_objs)
 
 	return rc;
 }
+
+static int hsm_show_objs(int idx, int nr_objs)
+{
+	int i;
+	int rc = 0;
+	struct mio_obj_id oid;
+	struct mio_pool_id pool_id;
+
+	if (idx >= hsm_params.cop_nr_objs)
+		return -EINVAL;
+
+	if (idx + nr_objs > hsm_params.cop_nr_objs)
+		nr_objs = hsm_params.cop_nr_objs - idx;
+
+	printf("Object     POOL_ID\n");
+	for (i = 0; i < nr_objs; i++) {
+		hsm_make_oid(&oid, idx + i);
+
+		rc = hsm_obj_pool_id(&oid, &pool_id);
+		if (rc < 0)
+			break;
+		printf("[Object %d] (%"PRIx64":%"PRIx64")\n",
+			i, pool_id.mpi_hi, pool_id.mpi_lo);
+
+	}
+
+	return rc;
+}
+
 
 /*
  * Set the hot and cold object thresholds.
@@ -355,7 +432,7 @@ static int hsm_workload_generate()
 	struct mio_obj_id oid;
 	struct mio_cmd_obj_hint chint;
 
-	nr_ops = 128; //1024;
+	nr_ops = 128;
 	nr_objs = hsm_params.cop_nr_objs;
 	freqs = malloc(sizeof(*freqs) * nr_objs);
 	if (freqs == NULL)
@@ -430,6 +507,8 @@ static enum hsm_action hsm_get_action(int argc, char **argv)
 		action = HSM_READ;
 	else if (!strcmp(action_str, "move"))
 		action = HSM_MOVE;
+	else if (!strcmp(action_str, "show"))
+		action = HSM_SHOW;
 	else if (!strcmp(action_str, "set_hot_thld"))
 		action = HSM_SET_HOT_OBJ_THLD;
 	else if (!strcmp(action_str, "set_cold_thld"))
@@ -443,15 +522,22 @@ static enum hsm_action hsm_get_action(int argc, char **argv)
 	return action;
 }
 
-static int hsm_get_io_args(int argc, char **argv, int *obj_idx, int *nr_objs)
+static int hsm_get_io_args(int argc, char **argv,
+			   int *obj_idx, int *nr_objs, int *blk_cnt)
 {
-	if (optind > argc - 1) {
+	if (optind >= argc - 1) {
 		hsm_action_usage();
 		return -EINVAL;
 	}
 
 	*obj_idx = atoi(argv[optind++]); 
 	*nr_objs = atoi(argv[optind++]);
+	if (blk_cnt != NULL) {
+		if (optind >= argc)
+			*blk_cnt = 0;
+		else
+			*blk_cnt = atoi(argv[optind++]);
+	}
 	return 0;
 }
 
@@ -460,6 +546,7 @@ static int hsm_shell_run_cmd(int argc, char **argv)
 	int rc = 0;
 	int idx;
 	int nr_objs;
+	int blk_cnt;
 	enum hsm_action action;
 
 	action = hsm_get_action(argc, argv);
@@ -479,16 +566,20 @@ static int hsm_shell_run_cmd(int argc, char **argv)
 		rc = hsm_workload_generate();
 		break;
 	case HSM_WRITE:
-		rc = hsm_get_io_args(argc, argv, &idx, &nr_objs)? :
-		     hsm_write_objs(idx, nr_objs);
+		rc = hsm_get_io_args(argc, argv, &idx, &nr_objs, &blk_cnt)? :
+		     hsm_write_objs(idx, nr_objs, blk_cnt);
 		break;
 	case HSM_READ:
-		rc = hsm_get_io_args(argc, argv, &idx, &nr_objs)? :
-		     hsm_read_objs(idx, nr_objs);
+		rc = hsm_get_io_args(argc, argv, &idx, &nr_objs, &blk_cnt)? :
+		     hsm_read_objs(idx, nr_objs, blk_cnt);
 		break;
 	case HSM_MOVE:
-		rc = hsm_get_io_args(argc, argv, &idx, &nr_objs)? :
+		rc = hsm_get_io_args(argc, argv, &idx, &nr_objs, NULL)? :
 		     hsm_move_objs(idx, nr_objs);
+		break;
+	case HSM_SHOW:
+		rc = hsm_get_io_args(argc, argv, &idx, &nr_objs, NULL)? :
+		     hsm_show_objs(idx, nr_objs);
 		break;
 	case HSM_SET_HOT_OBJ_THLD:
 		rc = hsm_set_obj_thld(argc, argv, true);

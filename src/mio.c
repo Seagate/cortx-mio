@@ -227,71 +227,70 @@ void mio_obj_close(struct mio_obj *obj)
 		obj->mo_drv_obj_ops->moo_close(obj);
 }
 
-enum {
-       MIO_DEFAULT_COLD_OBJ_THLD = 16,
-       MIO_DEFAULT_HOT_OBJ_THLD  = 128
-};
-
-static int obj_pool_select(struct mio_hints *hints, struct mio_pool_id *which)
+/*
+ * Select pool by performance hint (GOLD, SILVER or BRONZE).
+ * GOLD: choose the best performance pool.
+ * SILVER: choose the second best performance pool.
+ * BRONZE: choose the third best performance pool.
+ */
+static int obj_pool_select_by_perf_hint(struct mio_hints *hints, int *which)
 {
 	int rc = 0;
 	uint64_t hint_value;
+	int gold_pool_idx = 0;
+	int silver_pool_idx = 1;
+	int bronze_pool_idx = 2;
+	int pool_idx;
+
+	if (silver_pool_idx >= mio_pools.mps_nr_pools)
+		silver_pool_idx = gold_pool_idx;
+	if (bronze_pool_idx >= mio_pools.mps_nr_pools)
+		bronze_pool_idx = silver_pool_idx;
+
+	mio_hint_lookup(hints, MIO_HINT_OBJ_WHERE, &hint_value);
+	if (hint_value == MIO_POOL_GOLD) {
+		mio_log(MIO_DEBUG, "[obj_pool_select] GOLD\n");
+		pool_idx = gold_pool_idx;
+	} else if (hint_value == MIO_POOL_SILVER) {
+		mio_log(MIO_DEBUG, "[obj_pool_select] SILVER\n");
+		pool_idx = silver_pool_idx;
+	} else if (hint_value == MIO_POOL_BRONZE) {
+		mio_log(MIO_DEBUG, "[obj_pool_select] BRONZE\n");
+		pool_idx = bronze_pool_idx;
+	} else
+		rc = -EINVAL;
+
+	if (rc == 0)
+		*which = pool_idx;
+
+	return rc;
+}
+
+static int
+obj_pool_select_by_hotness(struct mio_hints *hints, int *which)
+{
+	int rc;
 	uint64_t hotness;
-	uint64_t hot_thld;
-	uint64_t cold_thld;
 
-	which->mpi_hi = 0x0;
-	which->mpi_lo = 0x0;
-	if (mio_hint_is_set(hints, MIO_HINT_OBJ_WHERE)) {
-		mio_hint_lookup(hints, MIO_HINT_OBJ_WHERE, &hint_value);
-		if (hint_value == MIO_POOL_GOLD) {
-			mio_log(MIO_DEBUG, "[obj_pool_select] GOLD\n");
-			which->mpi_hi = mio_pools.mps_pools[0].mp_id.mpi_hi;
-			which->mpi_lo = mio_pools.mps_pools[0].mp_id.mpi_lo;
-		} else if (hint_value == MIO_POOL_SILVER) {
-			mio_log(MIO_DEBUG, "[obj_pool_select] SILVER\n");
-			which->mpi_hi = mio_pools.mps_pools[0].mp_id.mpi_hi;
-			which->mpi_lo = mio_pools.mps_pools[0].mp_id.mpi_lo;
-		} else if (hint_value == MIO_POOL_BRONZE) {
-			mio_log(MIO_DEBUG, "[obj_pool_select] BRONZE\n");
-			which->mpi_hi = mio_pools.mps_pools[0].mp_id.mpi_hi;
-			which->mpi_lo = mio_pools.mps_pools[0].mp_id.mpi_lo;
-		} else
-			rc = -EINVAL;
-
+	rc = mio_hint_lookup(hints, MIO_HINT_OBJ_HOT_INDEX, &hotness);
+	if (rc < 0)
 		return rc;
-	}
 
-	if (mio_hint_is_set(hints, MIO_HINT_OBJ_HOT_INDEX)) {
-		rc = mio_hint_lookup(hints, MIO_HINT_OBJ_HOT_INDEX, &hotness);
-		if (rc < 0)
-			return rc;
+	*which = mio_obj_hotness_to_pool_idx(hotness);
+	return 0;
+}
 
-		rc = mio_sys_hint_get(MIO_HINT_HOT_OBJ_THRESHOLD, &hot_thld);
-		if (rc < 0)
-			hot_thld = MIO_DEFAULT_HOT_OBJ_THLD;
-		rc = mio_sys_hint_get(MIO_HINT_COLD_OBJ_THRESHOLD, &cold_thld);
-		if (rc < 0)
-			cold_thld = MIO_DEFAULT_COLD_OBJ_THLD;
+static int obj_pool_select(struct mio_hints *hints, int *which)
+{
+	if (mio_pools.mps_nr_pools <= 0)
+		return -EINVAL;
 
-		if (hotness > hot_thld) {
-			mio_log(MIO_DEBUG, "[obj_pool_select] HOT\n");
-			which->mpi_hi = mio_pools.mps_pools[0].mp_id.mpi_hi;
-			which->mpi_lo = mio_pools.mps_pools[0].mp_id.mpi_lo;
-		} else if (hotness < cold_thld) {
-			mio_log(MIO_DEBUG, "[obj_pool_select] COLD\n");
-			which->mpi_hi = mio_pools.mps_pools[0].mp_id.mpi_hi;
-			which->mpi_lo = mio_pools.mps_pools[0].mp_id.mpi_lo;
-		} else {
-			mio_log(MIO_DEBUG, "[obj_pool_select] WARM\n");
-			which->mpi_hi = mio_pools.mps_pools[0].mp_id.mpi_hi;
-			which->mpi_lo = mio_pools.mps_pools[0].mp_id.mpi_lo;
-		}
-
-		return rc;
-	}
-
-	return -EINVAL;
+	if (mio_hint_is_set(hints, MIO_HINT_OBJ_WHERE))
+		return obj_pool_select_by_perf_hint(hints, which);
+	else if (mio_hint_is_set(hints, MIO_HINT_OBJ_HOT_INDEX))
+		return obj_pool_select_by_hotness(hints, which);
+	else
+		return -EINVAL;
 }
 
 int mio_obj_create(const struct mio_obj_id *oid,
@@ -299,25 +298,35 @@ int mio_obj_create(const struct mio_obj_id *oid,
                    struct mio_obj *obj, struct mio_op *op)
 {
 	int rc;
-	struct mio_pool_id which_pool;
-	const struct mio_pool_id *which_pool_ptr;
+	int selected_pool_idx = 0;
+	const struct mio_pool_id *selected_pool_id = NULL;
 
 	if (pool_id == NULL) {
 		if (hints == NULL)
-			which_pool_ptr = NULL;
+			selected_pool_id = NULL;
 		else {
-			rc = obj_pool_select(hints, &which_pool);
+			rc = obj_pool_select(hints, &selected_pool_idx);
 			if (rc == 0)
-				which_pool_ptr = &which_pool;
+				selected_pool_id =
+					&mio_pools.mps_pools[selected_pool_idx].mp_id;
 			else
-				which_pool_ptr = NULL;
+				selected_pool_id = NULL;
 		}
+
+		/* Check if MIO sets default pool in configuration. */
+		if (selected_pool_id == NULL &&
+		    mio_conf_default_pool_has_set()) {
+			selected_pool_idx = mio_pools.mps_default_pool_idx;
+			selected_pool_id =
+				&mio_pools.mps_pools[selected_pool_idx].mp_id;
+		}
+
 	} else
-		which_pool_ptr = pool_id;
+		selected_pool_id = pool_id;
 
 	rc = obj_init(obj, oid)? :
 	     mio_obj_op_init(op, obj, MIO_OBJ_CREATE)? :
-	     obj->mo_drv_obj_ops->moo_create(which_pool_ptr, obj, op);
+	     obj->mo_drv_obj_ops->moo_create(selected_pool_id, obj, op);
 	return rc;
 }
 
@@ -393,7 +402,7 @@ int mio_obj_sync(struct mio_obj *obj, struct mio_op *op)
 	if (obj == NULL || op == NULL)
 		return -EINVAL;
 
-	rc = mio_obj_op_init(op, obj, MIO_OBJ_SYNC);
+	rc = mio_obj_op_init(op, obj, MIO_OBJ_SYNC)? :
 	     obj->mo_drv_obj_ops->moo_sync(obj, op);
 	return rc;
 }
@@ -783,6 +792,26 @@ int mio_pool_get_all(struct mio_pools **pools)
 	}
 
 	return rc;
+}
+
+int mio_obj_pool_id(const struct mio_obj *obj, struct mio_pool_id *pool_id)
+{
+	int rc = -EINVAL;
+
+	rc = (obj->mo_drv_obj_ops->moo_pool_id == NULL)?
+	     -EOPNOTSUPP :
+	     obj->mo_drv_obj_ops->moo_pool_id(obj, pool_id);
+	return rc;
+}
+
+bool mio_obj_pool_id_cmp(struct mio_pool_id *pool_id1,
+			 struct mio_pool_id *pool_id2)
+{
+	if (pool_id1->mpi_hi == pool_id2->mpi_hi &&
+	    pool_id1->mpi_lo == pool_id2->mpi_lo)
+		return true;
+	else
+		return false;
 }
 
 /* --------------------------------------------------------------- *

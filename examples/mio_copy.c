@@ -25,8 +25,9 @@ static void copy_usage(FILE *file, char *prog_name)
 				 "suffix b/k/m/g/K/M/G\n"
 "  -c, --block-count    INT       number of blocks to copy, can give with " \
 				 "suffix b/k/m/g/K/M/G\n"
+"  -p, --pool           POOL_ID   Specify which pool the object is created\n"
 "  -a, --async_mode               Set to async IO mode\n"
-"  -y, --mio_conf_file            MIO YAML configuration file\n"
+"  -y, --mio-conf-file            MIO YAML configuration file\n"
 "  -h, --help                     shows this help text and exit\n"
 , prog_name);
 }
@@ -36,33 +37,57 @@ int main(int argc, char **argv)
 	int rc;
 	struct mio_cmd_obj_params copy_params;
 	char *src_fname = NULL;
+        struct timeval stv;
+	struct timeval etv;
+	uint64_t time;
+	double time_in_sec;
+	double bw;
 
 	mio_cmd_obj_args_init(argc, argv, &copy_params, &copy_usage);
 	if (argv[optind] != NULL)
 		src_fname = strdup(argv[optind]);
-	if (src_fname == NULL) {
-		fprintf(stderr, "Missed source file to copy !\n");
-		copy_usage(stderr, basename(argv[0]));
-		exit(-1);
-	}
 
+	gettimeofday(&stv, NULL);
 	rc = mio_init(copy_params.cop_conf_fname);
 	if (rc < 0) {
 		mio_cmd_error("Initialising MIO failed", rc);
 		exit(EXIT_FAILURE);
 	}
+	gettimeofday(&etv, NULL);
+	time = (etv.tv_sec - stv.tv_sec) * 1000000 + etv.tv_usec - stv.tv_usec; 
+	printf("MIO Initilisation Time: %lu.%lu secs\n",
+		time / 1000000, time % 1000000);
 
+	gettimeofday(&stv, NULL);
 	rc = copy_params.cop_async_mode?
-	     mio_cmd_obj_write_async(src_fname, &copy_params.cop_oid,
+	     mio_cmd_obj_write_async(src_fname,
+				     &copy_params.cop_pool_id,
+				     &copy_params.cop_oid,
 				     copy_params.cop_block_size,
 				     copy_params.cop_block_count) :
-	     mio_cmd_obj_write(src_fname, &copy_params.cop_oid,
+	     mio_cmd_obj_write(src_fname,
+			       &copy_params.cop_pool_id,
+			       &copy_params.cop_oid,
 			       copy_params.cop_block_size,
 			       copy_params.cop_block_count);
 	if (rc < 0)
 		mio_cmd_error("Writing object failed", rc);
+	gettimeofday(&etv, NULL);
+	time = (etv.tv_sec - stv.tv_sec) * 1000000 + etv.tv_usec - stv.tv_usec; 
+	time_in_sec = time / 1000000.0;
+	bw = copy_params.cop_block_size * copy_params.cop_block_count / (1024 * 1024);
+	bw = bw / time_in_sec;
+	printf("MIO WRITE: Time = %lu.%lu secs, BW = %f.3 MB/s\n",
+		time / 1000000, time % 1000000, bw);
 
+
+	gettimeofday(&stv, NULL);
 	mio_fini();
+	gettimeofday(&etv, NULL);
+	time = (etv.tv_sec - stv.tv_sec) * 1000000 + etv.tv_usec - stv.tv_usec; 
+	printf("MIO Finalisation Time: %lu.%lu secs\n",
+		time / 1000000, time % 1000000);
+
 	free(src_fname);
 	mio_cmd_obj_args_fini(&copy_params);
 	return rc;

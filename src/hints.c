@@ -458,6 +458,67 @@ int mio_obj_hint_get(struct mio_obj *obj, int hint_key, uint64_t *hint_value)
 	return rc;
 }
 
+enum {
+       MIO_DEFAULT_COLD_OBJ_THLD = 16,
+       MIO_DEFAULT_HOT_OBJ_THLD  = 128
+};
+
+int mio_obj_hotness_to_pool_idx(uint64_t hotness)
+{
+	uint64_t hot_thld;
+	uint64_t cold_thld;
+	int hot_pool_idx = 0;
+	int cold_pool_idx = 0;
+	int warm_pool_idx = 0;
+	struct mio_pool_id *pool_id;
+
+	if (mio_sys_hint_get(MIO_HINT_HOT_OBJ_THRESHOLD, &hot_thld) < 0)
+		hot_thld = MIO_DEFAULT_HOT_OBJ_THLD;
+	if (mio_sys_hint_get(MIO_HINT_COLD_OBJ_THRESHOLD, &cold_thld) < 0)
+		cold_thld = MIO_DEFAULT_COLD_OBJ_THLD;
+
+	/*
+	 * Calculate warm pool index according the hotness distance to
+	 * hot and cold thresholds.
+	 */
+	assert(mio_pools.mps_nr_pools >= 1);
+	cold_pool_idx = mio_pools.mps_nr_pools - 1;
+	assert(hot_pool_idx <= cold_pool_idx);
+	warm_pool_idx =
+		((cold_pool_idx - hot_pool_idx) * (hot_thld - hotness) +
+		 hot_thld - cold_thld - 1) /
+		(hot_thld - cold_thld);
+	assert(warm_pool_idx >= hot_pool_idx && warm_pool_idx <= cold_pool_idx);
+
+	if (hotness > hot_thld) {
+		pool_id = &mio_pools.mps_pools[hot_pool_idx].mp_id;
+		mio_log(MIO_DEBUG,
+			"[obj_pool_select] HOT Pool: (%"PRIx64":%"PRIx64")\n",
+			pool_id->mpi_hi, pool_id->mpi_lo);
+		return hot_pool_idx;
+	} else if (hotness < cold_thld) {
+		pool_id = &mio_pools.mps_pools[cold_pool_idx].mp_id;
+		mio_log(MIO_DEBUG,
+			"[obj_pool_select] COLD Pool: (%"PRIx64":%"PRIx64")\n",
+			pool_id->mpi_hi, pool_id->mpi_lo);
+		return cold_pool_idx;
+	} else {
+		pool_id = &mio_pools.mps_pools[warm_pool_idx].mp_id;
+		mio_log(MIO_DEBUG,
+			"[obj_pool_select] WARM Pool: (%"PRIx64":%"PRIx64")\n",
+			pool_id->mpi_hi, pool_id->mpi_lo);
+		return warm_pool_idx;
+	}
+}
+
+struct mio_pool_id mio_obj_hotness_to_pool_id(uint64_t hotness)
+{
+	int pool_idx;
+
+	pool_idx = mio_obj_hotness_to_pool_idx(hotness);
+	return mio_pools.mps_pools[pool_idx].mp_id;
+}
+
 /**
  * Set and get system level hints. Currently system hints are session based,
  * support for persistent system hint will added later.
@@ -480,6 +541,7 @@ int mio_sys_hint_get(int hint_key, uint64_t *hint_value)
 {
 	return mio_hint_lookup(&mio_sys_hints, hint_key, hint_value);
 }
+
 /*
  *  Local variables:
  *  c-indentation-style: "K&R"

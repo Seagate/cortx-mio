@@ -134,7 +134,7 @@ static int rwt_obj_write(struct rwt_obj_todo *todo)
 
 	/* Create the target object if it doesn't exist. */
 	memset(&obj, 0, sizeof obj);
-	rc = obj_create(oid, &obj, NULL);
+	rc = obj_create(NULL, oid, &obj, NULL);
 	if (rc < 0 && rc != -EEXIST)
 		return rc;
 
