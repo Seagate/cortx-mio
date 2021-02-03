@@ -26,7 +26,8 @@ static void cat_usage(FILE *file, char *prog_name)
 "  -c, --block-count    INT       number of blocks for IO, can give with " \
 				 "suffix b/k/m/g/K/M/G\n"
 "  -a, --async_mode               Set to async IO mode\n"
-"  -p, --print_on_console         print content on console\n"
+"  -l, --async_step               Set the number of blocks for each op in async mode\n"
+"  -v, --print_on_console         print content on console\n"
 "  -y, --mio_conf_file            MIO YAML configuration file\n"
 "  -h, --help                     shows this help text and exit\n"
 , prog_name);
@@ -63,7 +64,8 @@ int main(int argc, char **argv)
 	rc = cat_params.cop_async_mode?
 	     mio_cmd_obj_read_async(&cat_params.cop_oid, dst_fname,
 				    cat_params.cop_block_size,
-				    cat_params.cop_block_count) :
+				    cat_params.cop_block_count,
+				    cat_params.cop_async_step) :
 	     mio_cmd_obj_read(&cat_params.cop_oid, dst_fname,
 			      cat_params.cop_block_size,
 			      cat_params.cop_block_count);

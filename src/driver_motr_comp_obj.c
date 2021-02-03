@@ -127,7 +127,7 @@ mio_motr_comp_obj_add_layers(struct mio_obj *obj, int nr_layers,
 		mio__obj_id_to_uint128(&layers[i].mcol_oid, &id128);
 		m0_obj_init(layer_objs + i,
 				   &mio_motr_container.co_realm, &id128,
-				   mio_motr_inst_confs->mc_default_layout_id);
+				   mio_drv_motr_conf->mc_default_layout_id);
                 rc = m0_composite_layer_add(
 			layout, layer_objs + i, layers[i].mcol_priority);
                 if (rc < 0)

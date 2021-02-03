@@ -31,12 +31,14 @@ struct mio_cmd_obj_params {
 
 	struct mio_pool_id cop_pool_id;
 
+	int cop_io_type;
 	struct mio_obj_id cop_oid;
 	int cop_nr_objs;
 	uint64_t cop_block_size;
 	uint64_t cop_block_count;
 
 	bool cop_async_mode;
+	uint64_t cop_async_step; /* how many blocks for each op.*/
 
 	int cop_nr_threads;
 };
@@ -55,20 +57,22 @@ void mio_cmd_obj_args_fini(struct mio_cmd_obj_params *params);
 
 int mio_cmd_obj_write(char *src, struct mio_pool_id *pool,
 		      struct mio_obj_id *oid,
-		      uint32_t block_size, uint32_t block_count);
+		      uint64_t block_size, uint64_t block_count);
 
 int mio_cmd_obj_write_async(char *src, struct mio_pool_id *pool,
 			    struct mio_obj_id *oid,
-			    uint32_t block_size, uint32_t block_count);
+			    uint64_t block_size, uint64_t block_count,
+			    uint64_t async_step);
 
 int mio_cmd_obj_read(struct mio_obj_id *oid, char *dest,
-		     uint32_t block_size, uint32_t block_count);
+		     uint64_t block_size, uint64_t block_count);
 int mio_cmd_obj_read_async(struct mio_obj_id *oid, char *dest,
-			   uint32_t block_size, uint32_t block_count);
+			   uint64_t block_size, uint64_t block_count,
+			   uint64_t async_step);
 
 int mio_cmd_obj_copy(struct mio_obj_id *from_oid,
 		     struct mio_pool_id *to_pool, struct mio_obj_id *to_oid,
-		     uint32_t block_size, struct mio_cmd_obj_hint *chint);
+		     uint64_t block_size, struct mio_cmd_obj_hint *chint);
 
 int mio_cmd_obj_touch(struct mio_obj_id *oid);
 int mio_cmd_obj_unlink(struct mio_obj_id *id);
@@ -77,12 +81,12 @@ int mio_cmd_obj_open(struct mio_obj_id *oid,struct mio_obj *obj);
 void mio_cmd_obj_close(struct mio_obj *obj);
 
 /** Helper functions. */
-int obj_alloc_iovecs(struct mio_iovec **data, uint32_t bcount,
-		     uint32_t bsize, uint64_t offset, uint64_t max_offset);
+int obj_alloc_iovecs(struct mio_iovec **data, uint64_t bcount,
+		     uint64_t bsize, uint64_t offset, uint64_t max_offset);
 void obj_cleanup_iovecs(struct mio_iovec *data);
-int obj_read_data_from_file(FILE *fp, uint32_t bcount, uint32_t bsize,
+int obj_read_data_from_file(FILE *fp, uint64_t bcount, uint64_t bsize,
 			    struct mio_iovec *data);
-int obj_write_data_to_file(FILE *fp, uint32_t bcount, struct mio_iovec *data);
+int obj_write_data_to_file(FILE *fp, uint64_t bcount, struct mio_iovec *data);
 
 int obj_open(struct mio_obj_id *oid, struct mio_obj *obj);
 void obj_close(struct mio_obj *obj);
@@ -92,8 +96,8 @@ int obj_open_or_create(struct mio_pool_id *pool, struct mio_obj_id *oid,
 		       struct mio_obj *obj, struct mio_cmd_obj_hint *chint);
 int obj_rm(struct mio_obj_id *oid);
 
-int obj_write(struct mio_obj *obj, uint32_t bcount, struct mio_iovec *data);
-int obj_read(struct mio_obj *obj, uint32_t bcount, struct mio_iovec *data);
+int obj_write(struct mio_obj *obj, uint64_t bcount, struct mio_iovec *data);
+int obj_read(struct mio_obj *obj, uint64_t bcount, struct mio_iovec *data);
 
 void obj_id_printf(struct mio_obj_id *oid);
 

@@ -51,6 +51,7 @@ enum conf_key {
 	MOTR_IS_READ_VERIFY,
 	MOTR_TM_RECV_QUEUE_MIN_LEN,
 	MOTR_MAX_RPC_MSG_SIZE,
+	MOTR_MAX_IOSIZE_PER_DEV,
 	MOTR_DEFAULT_UNIT_SIZE,
 	MOTR_USER_GROUP,
 	MOTR_POOLS,
@@ -131,6 +132,10 @@ struct conf_entry conf_table[] = {
 	},
 	[MOTR_MAX_RPC_MSG_SIZE] = {
 		.name = "MOTR_MAX_RPC_MSG_SIZE",
+		.type = MOTR
+	},
+	[MOTR_MAX_IOSIZE_PER_DEV] = {
+		.name = "MOTR_MAX_IOSIZE_PER_DEV",
 		.type = MOTR
 	},
 	[MOTR_DEFAULT_UNIT_SIZE] = {
@@ -236,6 +241,10 @@ static int conf_copy_str(char **to, char *from)
 	return 0;
 }
 
+enum {
+	MIO_MOTR_DEFAULT_IOSIZE_PER_DEV = 128 * 4096
+};
+
 static int conf_alloc_driver(int key)
 {
 	int rc = 0;
@@ -252,6 +261,8 @@ static int conf_alloc_driver(int key)
 		mio_driver_confs[MIO_MOTR] = motr_conf;
 		if (motr_conf == NULL)
 			rc = -ENOMEM;
+		motr_conf->mc_max_iosize_per_dev =
+			MIO_MOTR_DEFAULT_IOSIZE_PER_DEV;
 		break;
 	case CEPH:
 		fprintf(stderr, "Ceph driver is not supported yet!");
@@ -429,6 +440,9 @@ static int conf_extract_value(enum conf_key key, char *value)
 		break;
 	case MOTR_MAX_RPC_MSG_SIZE:
 		motr_conf->mc_max_rpc_msg_size = atoi(value);
+		break;
+	case MOTR_MAX_IOSIZE_PER_DEV:
+		motr_conf->mc_max_iosize_per_dev = atoi(value);
 		break;
 	case MOTR_DEFAULT_UNIT_SIZE:
 		motr_conf->mc_unit_size = atoi(value);

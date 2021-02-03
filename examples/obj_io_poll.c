@@ -27,7 +27,7 @@
  * in MIO) operations and poll the operations in a dedicated thread.
  */
 
-int obj_write(struct mio_obj *obj, uint32_t bcount, struct mio_iovec *data)
+int obj_write(struct mio_obj *obj, uint64_t bcount, struct mio_iovec *data)
 {
 	int rc;
 	struct mio_op op;
@@ -44,7 +44,7 @@ int obj_write(struct mio_obj *obj, uint32_t bcount, struct mio_iovec *data)
 	return rc;
 }
 
-int obj_read(struct mio_obj *obj, uint32_t bcount, struct mio_iovec *data)
+int obj_read(struct mio_obj *obj, uint64_t bcount, struct mio_iovec *data)
 {
 	int rc;
 	struct mio_op op;
@@ -66,10 +66,10 @@ int obj_read(struct mio_obj *obj, uint32_t bcount, struct mio_iovec *data)
  */
 int mio_cmd_obj_write(char *src, struct mio_pool_id *pool,
 		      struct mio_obj_id *oid,
-		      uint32_t block_size, uint32_t block_count)
+		      uint64_t block_size, uint64_t block_count)
 {
 	int rc = 0;
-	uint32_t bcount;
+	uint64_t bcount;
 	uint64_t last_index;
 	uint64_t max_index;
 	uint64_t max_block_count;
@@ -145,10 +145,10 @@ src_close:
  * Read an object and output to a file or stderr.
  */
 int mio_cmd_obj_read(struct mio_obj_id *oid, char *dest,
-		     uint32_t block_size, uint32_t block_count)
+		     uint64_t block_size, uint64_t block_count)
 {
 	int rc = 0;
-	uint32_t bcount;
+	uint64_t bcount;
 	uint64_t last_index;
 	uint64_t max_index;
 	uint64_t max_block_count;
@@ -220,10 +220,10 @@ dest_close:
  */
 int mio_cmd_obj_copy(struct mio_obj_id *from_oid,
 		     struct mio_pool_id *to_pool, struct mio_obj_id *to_oid,
-		     uint32_t block_size, struct mio_cmd_obj_hint *chint)
+		     uint64_t block_size, struct mio_cmd_obj_hint *chint)
 {
 	int rc = 0;
-	uint32_t bcount;
+	uint64_t bcount;
 	uint64_t last_index;
 	uint64_t max_index;
 	uint64_t block_count;
