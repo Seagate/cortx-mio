@@ -1,3 +1,6 @@
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/2a94083b43e14f6a9b845809148124bb)](https://www.codacy.com/gh/Seagate/cortx-mio/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=Seagate/cortx-mio&amp;utm_campaign=Badge_Grade)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/Seagate/cortx-mio/blob/master/LICENSE) [![Slack](https://img.shields.io/badge/chat-on%20Slack-blue")](https://join.slack.com/t/cortxcommunity/shared_invite/zt-femhm3zm-yiCs5V9NBxh89a_709FFXQ?) [![YouTube](https://img.shields.io/badge/Video-YouTube-red)](https://cortx.link/videos)
+
 Copyright: (c) 2020 - 2021 Seagate Technology LLC and/or its its Affiliates,
 All Rights Reserved
 
