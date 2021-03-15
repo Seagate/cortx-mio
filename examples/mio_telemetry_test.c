@@ -1,0 +1,108 @@
+/* -*- C -*- */
+/*
+ * Copyright: (c) 2020 - 2021 Seagate Technology LLC and/or its its Affiliates,
+ * All Rights Reserved
+ *
+ * This software is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "src/mio.h"
+#include "src/mio_telemetry.h"
+#include "obj.h"
+#include "helpers.h"
+
+static void telem_usage(FILE *file, char *prog_name)
+{
+	fprintf(file, "Usage: %s Test telemetry APIs.\n", prog_name);
+}
+
+void telem_tests()
+{
+	int i;
+	int j;
+	char *topic;
+	uint64_t val_u64;
+	enum mio_telemetry_type type;
+	uint16_t val_u16;
+	uint32_t val_u32;
+	uint64_t *elms_u64;
+	struct mio_telemetry_array array;
+
+	topic = malloc(128);
+	if (topic == NULL)
+		return;
+	for (i = 0; i < 1; i++) {
+		sprintf(topic, "mio_telemetry_uint64_%d", i);
+		type = MIO_TM_TYPE_UINT64;
+		val_u64 = (i + 1) * 1024 * 1024;
+		mio_telemetry_advertise(topic, type, &val_u64);
+	}
+
+	for (i = 0; i < 1; i++) {
+		sprintf(topic, "mio_telemetry_uint16_%d", i);
+		type = MIO_TM_TYPE_UINT16;
+		val_u16 = (i + 1) * 1024;
+		mio_telemetry_advertise(topic, type, &val_u16);
+	}
+
+	for (i = 0; i < 1; i++) {
+		sprintf(topic, "mio_telemetry_uint32_%d", i);
+		type = MIO_TM_TYPE_UINT32;
+		val_u32 = (i + 1) * 1024 * 128;
+		mio_telemetry_advertise(topic, type, &val_u32);
+	}
+
+	elms_u64 = malloc(8 * sizeof(uint64_t));
+	if (elms_u64 == NULL)
+		return;
+	for (i = 0; i < 1; i++) {
+		sprintf(topic, "mio_telemetry_array_uint64_%d", i);
+		type = MIO_TM_TYPE_ARRAY_UINT64;
+		for (j = 0; j < 8; j++)
+			elms_u64[j] = (j + 1) * 1024 * 1024;
+		array.mta_nr_elms = 8;
+		array.mta_elms = elms_u64;
+		mio_telemetry_advertise(topic, type, &array);
+	}
+
+	free(topic);
+}
+
+int main(int argc, char **argv)
+{
+	int rc;
+	struct mio_cmd_obj_params telem_params;
+
+	mio_cmd_obj_args_init(argc, argv, &telem_params, &telem_usage);
+
+	rc = mio_init(telem_params.cop_conf_fname);
+	rc = 1;
+	if (rc < 0) {
+		mio_cmd_error("Initialising MIO failed", rc);
+		exit(EXIT_FAILURE);
+	}
+
+	telem_tests();
+
+	mio_fini();
+	mio_cmd_obj_args_fini(&telem_params);
+	return rc;
+}
+
+/*
+ *  Local variables:
+ *  c-indentation-style: "K&R"
+ *  c-basic-offset: 8
+ *  tab-width: 8
+ *  fill-column: 80
+ *  scroll-step: 1
+ *  End:
+ */
+/*
+ * vim: tabstop=8 shiftwidth=8 noexpandtab textwidth=80 nowrap
+ */

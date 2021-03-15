@@ -352,10 +352,13 @@ struct mio_motr_config {
  	 */
 	uint64_t mc_max_iosize_per_dev;
 
-	/*
+	/**
  	 * Motr user group.
  	 */
 	char *mc_motr_group;
+
+	/** Is ADDB on? */
+	bool mc_is_addb_on;
 };
 
 /**
@@ -394,6 +397,12 @@ uint64_t mio_now();
 
 uint64_t mio_byteorder_cpu_to_be64(uint64_t cpu_64bits);
 uint64_t mio_byteorder_be64_to_cpu(uint64_t big_endian_64bits);
+uint16_t mio_byteorder_cpu_to_le16(uint16_t cpu_16bits);
+uint16_t mio_byteorder_le16_to_cpu(uint16_t le_16bits);
+uint32_t mio_byteorder_cpu_to_le32(uint32_t cpu_32bits);
+uint32_t mio_byteorder_le32_to_cpu(uint32_t le_32bits);
+uint64_t mio_byteorder_cpu_to_le64(uint64_t cpu_64bits);
+uint64_t mio_byteorder_le64_to_cpu(uint64_t le_64bits);
 
 int mio_conf_init(const char *config_file);
 void mio_conf_fini();

@@ -14,6 +14,7 @@
 #include "logger.h"
 #include "mio.h"
 #include "mio_internal.h"
+#include "mio_telemetry.h"
 #include "driver_motr.h"
 
 /**
@@ -120,7 +121,7 @@ static int mio_motr_obj_close(struct mio_obj *obj)
 #endif
 
 	/* Update object attributes to metada key-value store. */
-	mio_memset(&mop, 0, sizeof mop);
+	mio_op_init(&mop);
 	mio_obj_op_init(&mop, obj, MIO_OBJ_ATTRS_SET);
 	rc = motr_obj_attrs_query(M0_IC_PUT, obj,
 				  motr_obj_attrs_query_free_pp, &mop);
@@ -1093,6 +1094,9 @@ static int motr_obj_rw_one_op(struct mio_obj *obj,
 	if (rc < 0)
 		goto error;
 
+	mio_telemetry_array_advertise(
+		"mio-op-to-motr-io", MIO_TM_TYPE_ARRAY_UINT64,
+		3, obj->mo_sess_seqno, op->mop_seqno, cops[0]->op_sm.sm_id);
 	m0_op_launch(cops, ARRAY_SIZE(cops));
 	return 0;
 
@@ -1626,6 +1630,9 @@ static int motr_obj_attrs_query(int opcode, struct mio_obj *obj,
 	if (rc < 0)
 		goto error;
 
+	mio_telemetry_array_advertise(
+		"mio-op-to-motr-kv", MIO_TM_TYPE_ARRAY_UINT64,
+		3, obj->mo_sess_seqno, op->mop_seqno, cops[0]->op_sm.sm_id);
 	m0_op_launch(cops, 1);
 	return 0;
 
@@ -1745,7 +1752,7 @@ static int mio_motr_obj_hint_store(struct mio_obj *obj)
 	struct mio_op mop;
 	struct m0_op *cop;
 
-	mio_memset(&mop, 0, sizeof mop);
+	mio_op_init(&mop);
 	mio_obj_op_init(&mop, obj, MIO_OBJ_ATTRS_SET);
 	rc = motr_obj_attrs_query(M0_IC_PUT, obj,
 				    motr_obj_attrs_query_free_pp, &mop);

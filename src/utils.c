@@ -65,6 +65,36 @@ uint64_t mio_byteorder_be64_to_cpu(uint64_t big_endian_64bits)
         return __be64_to_cpu(big_endian_64bits);
 }
 
+uint16_t mio_byteorder_cpu_to_le16(uint16_t cpu_16bits)
+{
+        return __cpu_to_le16(cpu_16bits);
+}
+
+uint16_t mio_byteorder_le16_to_cpu(uint16_t le_16bits)
+{
+        return __le16_to_cpu(le_16bits);
+}
+
+uint32_t mio_byteorder_cpu_to_le32(uint32_t cpu_32bits)
+{
+        return __cpu_to_le32(cpu_32bits);
+}
+
+uint32_t mio_byteorder_le32_to_cpu(uint32_t le_32bits)
+{
+        return __le32_to_cpu(le_32bits);
+}
+
+uint64_t mio_byteorder_cpu_to_le64(uint64_t cpu_64bits)
+{
+        return __cpu_to_le64(cpu_64bits);
+}
+
+uint64_t mio_byteorder_le64_to_cpu(uint64_t le_64bits)
+{
+        return __le64_to_cpu(le_64bits);
+}
+
 /*
  *  Local variables:
  *  c-indentation-style: "K&R"

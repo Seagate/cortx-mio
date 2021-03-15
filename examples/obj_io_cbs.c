@@ -202,7 +202,6 @@ int mio_cmd_obj_write_async(char *src, struct mio_pool_id *pool,
 	fp = fopen(src, "r");
 	if (fp == NULL)
 		return -errno;
-
 	rc = fstat(fileno(fp), &src_stat);
 	if (rc < 0)
 		goto src_close;

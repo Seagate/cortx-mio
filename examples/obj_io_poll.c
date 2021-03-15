@@ -27,10 +27,57 @@
  * in MIO) operations and poll the operations in a dedicated thread.
  */
 
+/*
+ * Add telemetry data points at places where an IO starts and ends.
+ */
+void
+telemetry_obj_io_start(struct mio_obj *obj, uint64_t bcount,
+		       struct mio_iovec *data, bool is_write)
+{
+	int i;
+	uint64_t io_size = 0;
+	char topic[64];
+	uint64_t u1;
+	uint64_t u2;
+
+	memcpy(&u1, obj->mo_id.moi_bytes, sizeof u1);
+	memcpy(&u2, obj->mo_id.moi_bytes + sizeof u1, sizeof u2);
+	u1 = __be64_to_cpu(u1);
+	u2 = __be64_to_cpu(u2);
+
+	sprintf(topic, "mio-obj-%s-start", is_write? "write" : "read");
+	mio_telemetry_array_advertise(
+		topic, MIO_TM_TYPE_ARRAY_UINT64, 2, u1, u2);
+
+	sprintf(topic, "mio-obj-%s-iosize", is_write? "write" : "read");
+	for (i = 0; i < bcount; i++)
+		io_size += data[i].miov_len;
+	mio_telemetry_array_advertise(
+		topic, MIO_TM_TYPE_ARRAY_UINT64, 3, u1, u2, io_size);
+}
+
+void telemetry_obj_io_end(struct mio_obj *obj, bool is_write)
+{
+	char topic[64];
+	uint64_t u1;
+	uint64_t u2;
+
+	memcpy(&u1, obj->mo_id.moi_bytes, sizeof u1);
+	memcpy(&u2, obj->mo_id.moi_bytes + sizeof u1, sizeof u2);
+	u1 = __be64_to_cpu(u1);
+	u2 = __be64_to_cpu(u2);
+
+	sprintf(topic, "mio-obj-%s-end", is_write? "write" : "read");
+	mio_telemetry_array_advertise(
+		topic, MIO_TM_TYPE_ARRAY_UINT64, 2, u1, u2);
+}
+
 int obj_write(struct mio_obj *obj, uint64_t bcount, struct mio_iovec *data)
 {
 	int rc;
 	struct mio_op op;
+	
+	telemetry_obj_io_start(obj, bcount, data, true);
 
 	mio_op_init(&op);
 	rc = mio_obj_writev(obj, data, bcount, &op);
@@ -41,6 +88,8 @@ int obj_write(struct mio_obj *obj, uint64_t bcount, struct mio_iovec *data)
 	if (rc < 0)
 		fprintf(stderr, "Failed in writing to object!\n");
 	mio_op_fini(&op);
+
+	telemetry_obj_io_end(obj, true);
 	return rc;
 }
 
@@ -48,6 +97,8 @@ int obj_read(struct mio_obj *obj, uint64_t bcount, struct mio_iovec *data)
 {
 	int rc;
 	struct mio_op op;
+
+	telemetry_obj_io_start(obj, bcount, data, true);
 
 	mio_op_init(&op);
 	rc = mio_obj_readv(obj, data, bcount, &op);
@@ -58,6 +109,8 @@ int obj_read(struct mio_obj *obj, uint64_t bcount, struct mio_iovec *data)
 	if (rc < 0)
 		fprintf(stderr, "Failed in reading from object!\n");
 	mio_op_fini(&op);
+
+	telemetry_obj_io_end(obj, true);
 	return rc;
 }
 
