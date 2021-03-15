@@ -13,7 +13,9 @@
 #ifndef __MIO_H__
 #define __MIO_H__
 
+#include <pthread.h>
 #include "mio_internal.h"
+#include "mio_telemetry.h"
 #include "logger.h"
 
 typedef void (*mio_callback)(struct mio_op *op);
@@ -83,6 +85,8 @@ struct mio_op_app_cbs {
 };
 
 struct mio_op {
+	uint64_t mop_seqno;
+
 	unsigned int mop_opcode; /* Type of operation. */
 	union {                  /* Which object or key-value set. */
 		struct mio_obj *obj;
@@ -95,16 +99,20 @@ struct mio_op {
 
 	struct mio_op_app_cbs mop_app_cbs;
 
-	/* See mio_drv_op_chain in mio_inernal for explanation. */
+	/* See mio_drv_op_chain in mio_inernal.h for explanation. */
 	struct mio_driver_op_chain mop_drv_op_chain;
 
 	struct mio_op_ops *mop_op_ops;
 };
+
+extern pthread_mutex_t mio_op_seqno_lock;
+extern uint64_t mio_op_seqno;
+
 /**
  * Initialise and finalise an operation. Applications have to allocate
  * memory for the operation before calling mio_op_init().
  */
-void mio_op_init(struct mio_op *op);
+int mio_op_init(struct mio_op *op);
 void mio_op_fini(struct mio_op *op);
 struct mio_op* mio_op_alloc_init();
 void mio_op_fini_free(struct mio_op *op);
@@ -291,6 +299,14 @@ struct mio_obj {
 	struct mio_obj_id mo_id;
 	struct mio_obj_op *mo_op;
 
+	/**
+	 * Sequence number of a opened object session. This sequence
+	 * number can be used to associated all operations issued
+	 * in this session, which can be used in telemetry data
+	 * analysis.
+	 */
+	uint64_t mo_sess_seqno;
+
 	/** Driver specific object ops. */
 	struct mio_obj_ops *mo_drv_obj_ops;
 
@@ -310,6 +326,9 @@ struct mio_obj {
 	/** Pointer to driver specific object lock. */
 	void *mo_drv_obj_lock;
 };
+
+extern pthread_mutex_t mio_obj_session_seqno_lock;
+extern uint64_t mio_obj_session_seqno;
 
 enum mio_pool_type {
 	MIO_POOL_TYPE_NVM = 0,
@@ -776,6 +795,8 @@ mio_composite_obj_get_extents(struct mio_obj *obj,
  * and key-value set.
  */
 struct mio {
+	enum mio_telemetry_store_type m_telem_store_type;
+	
 	enum mio_log_level m_log_level;
 	char *m_log_file;
 

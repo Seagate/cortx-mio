@@ -15,9 +15,15 @@
 #include "logger.h"
 #include "mio_internal.h"
 #include "mio.h"
+#include "mio_telemetry.h"
 
 struct mio_kvs mio_obj_attrs_kvs;
 struct mio *mio_instance = NULL;
+
+uint64_t mio_obj_session_seqno = 0;
+pthread_mutex_t mio_obj_session_seqno_lock;
+uint64_t mio_op_seqno = 0;
+pthread_mutex_t mio_op_seqno_lock;
 
 int mio_instance_check()
 {
@@ -45,12 +51,12 @@ int mio_instance_check()
  *                     Operation                                   *
  * ----------------------------------------------------------------*/
 
-void mio_op_init(struct mio_op *op)
+int mio_op_init(struct mio_op *op)
 {
 	if (op == NULL)
-		return;
+		return -EINVAL;
 	if (mio_instance_check())
-		return;
+		return -EIO;
 
 	/*
  	 * When mio_op_init() is called, no driver specific operation
@@ -58,6 +64,7 @@ void mio_op_init(struct mio_op *op)
  	 */
 	mio_memset(op, 0, sizeof *op);
 	op->mop_op_ops = mio_instance->m_driver->md_op_ops;
+	return 0;
 }
 
 void mio_op_fini(struct mio_op *op)
@@ -66,6 +73,9 @@ void mio_op_fini(struct mio_op *op)
 
 	if (op->mop_op_ops->mopo_fini)
 		op->mop_op_ops->mopo_fini(op);
+
+	mio_telemetry_advertise(
+		"mio-op-fini", MIO_TM_TYPE_UINT64, &op->mop_seqno);
 }
 
 struct mio_op* mio_op_alloc_init()
@@ -173,6 +183,12 @@ int mio_obj_op_init(struct mio_op *op, struct mio_obj *obj,
 {
 	int rc = 0;
 
+	/*
+	 * The `op` must have been allocated. In the case of async
+	 * callbacks, those callback function have been set
+	 * before reaching here. So don't call mio_op_init() again
+	 * in which the `op` is set to all `0`.
+	 */ 
 	if (op == NULL)
 		return -EINVAL;
 	rc = mio_instance_check();
@@ -182,6 +198,15 @@ int mio_obj_op_init(struct mio_op *op, struct mio_obj *obj,
 	op->mop_opcode = opcode;
 	op->mop_who.obj = obj;
 	op->mop_op_ops = mio_instance->m_driver->md_op_ops;
+
+	pthread_mutex_lock(&mio_op_seqno_lock);
+	op->mop_seqno = mio_op_seqno++;
+	pthread_mutex_unlock(&mio_op_seqno_lock);
+
+	if (obj != NULL)
+		mio_telemetry_array_advertise(
+			"mio-obj-op-init", MIO_TM_TYPE_ARRAY_UINT64,
+			3, obj->mo_sess_seqno, op->mop_seqno, opcode);
 	return 0;
 }
 
@@ -204,6 +229,14 @@ static int obj_init(struct mio_obj *obj, const struct mio_obj_id *oid)
  	 */
 	obj->mo_md_kvs = &mio_obj_attrs_kvs;
 	mio_hint_map_init(&obj->mo_hints.mh_map, MIO_OBJ_HINT_NUM);
+
+	/* Set the session sequence number. */
+	pthread_mutex_lock(&mio_obj_session_seqno_lock);
+	obj->mo_sess_seqno = mio_obj_session_seqno++;
+	pthread_mutex_unlock(&mio_obj_session_seqno_lock);
+
+	mio_telemetry_advertise(
+		"mio-obj-open", MIO_TM_TYPE_UINT64, &obj->mo_sess_seqno);
 	return 0;
 }
 
@@ -222,9 +255,13 @@ void mio_obj_close(struct mio_obj *obj)
 {
 	if (obj == NULL)
 		return;
+
 	mio_hint_map_fini(&obj->mo_hints.mh_map);
 	if (obj->mo_drv_obj_ops->moo_close != NULL)
 		obj->mo_drv_obj_ops->moo_close(obj);
+
+	mio_telemetry_advertise(
+		"mio-obj-close", MIO_TM_TYPE_UINT64, &obj->mo_sess_seqno);
 }
 
 /*
@@ -477,13 +514,22 @@ static int kvs_driver_check()
 static int kvs_op_init(struct mio_op *op, struct mio_kvs_id *kid,
 		       enum mio_kvs_opcode opcode)
 {
+	int rc;
+
 	if (op == NULL)
 		return -EINVAL;
+	rc = mio_instance_check();
+	if (rc < 0)
+		return rc;
 
-	mio_memset(op, 0, sizeof op);
 	op->mop_opcode = opcode;
 	op->mop_who.kvs_id = kid;
 	op->mop_op_ops = mio_instance->m_driver->md_op_ops;
+
+	pthread_mutex_lock(&mio_op_seqno_lock);
+	op->mop_seqno = mio_op_seqno++;
+	pthread_mutex_unlock(&mio_op_seqno_lock);
+
 	return 0;
 }
 
@@ -853,7 +899,12 @@ int mio_init(const char *yaml_conf)
 		goto error;
 	}
 
+	mio_telemetry_init();
+
 	mio_hints_init(&mio_sys_hints);
+
+	pthread_mutex_init(&mio_obj_session_seqno_lock, NULL);
+	pthread_mutex_init(&mio_op_seqno_lock, NULL);
 
 	return rc;
 
@@ -869,6 +920,10 @@ void mio_fini()
 	if (mio_instance == NULL)
 		return;
 
+	pthread_mutex_destroy(&mio_obj_session_seqno_lock);
+	pthread_mutex_destroy(&mio_op_seqno_lock);
+
+	mio_telemetry_fini();
 	mio_instance->m_driver->md_sys_ops->mdo_fini();
 	mio_mem_free(mio_instance);
 	mio_conf_fini();
