@@ -136,9 +136,12 @@ int mio_motr_init(struct mio *mio_inst)
 	struct m0_idx_dix_config dix_conf;
 
 	drv = (struct mio_motr_config *)mio_inst->m_driver_confs;
+	drv->mc_is_addb_on =
+		(mio_inst->m_telem_store_type == MIO_TM_ST_ADDB)? true : false;
 	mio_drv_motr_conf = drv;
 
 	/* Set motr configuration parameters. */
+	mio_motr_inst_conf.mc_is_addb_init          = drv->mc_is_addb_on; 
 	mio_motr_inst_conf.mc_is_oostore            = drv->mc_is_oostore;
 	mio_motr_inst_conf.mc_is_read_verify        = drv->mc_is_read_verify;
 	mio_motr_inst_conf.mc_local_addr            = drv->mc_motr_local_addr;

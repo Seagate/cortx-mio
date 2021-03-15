@@ -21,6 +21,7 @@
 #include <sys/time.h>
 
 #include "src/mio.h"
+#include "src/mio_telemetry.h"
 
 enum {
 	MIO_CMD_MAX_BLOCK_COUNT_PER_OP = 120

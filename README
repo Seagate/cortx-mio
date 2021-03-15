@@ -41,6 +41,8 @@ Edit mio_config.yaml to reflect Motr configurations in your system:
 (b) replace MOTR_HA_ADDR with your HA address.
 (c) MOTR_PROFILE and MOTR_PROCESS_FID (usually no need to change these 2 parameters)
 (d) replace the MOTR_USER_GROUP with the Motr user group in your system.
+(e) To turn on ADDB for telemetry data generation, set MIO_TELEMETRY_STORE to
+    ADDB.
 
 Methods to get the above parameters:
 (a) hctl motr status

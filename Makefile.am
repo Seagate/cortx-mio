@@ -87,6 +87,13 @@ include $(top_srcdir)/src/Makefile.sub
 #-------------------------------------------------------------------------------
 include $(top_srcdir)/tests/Makefile.sub
 
+#-------------------------------------------------------------------------------
+#                                 Telemetry                                    #
+#-------------------------------------------------------------------------------
+noinst_PROGRAMS                   += telemetry/mio_telemetry_parser
+telemetry_mio_telemetry_parser_CPPFLAGS = -DMIO_TARGET='mio_telemetry_parser' $(AM_CPPFLAGS)
+telemetry_mio_telemetry_parser_LDADD    = $(top_builddir)/lib/libmio.la
+include $(top_srcdir)/telemetry/Makefile.sub
 
 #-------------------------------------------------------------------------------
 #                                 MIO Examples                                 #
@@ -109,7 +116,8 @@ noinst_PROGRAMS                   += examples/mio_comp_obj_example
 noinst_PROGRAMS                   += examples/mio_rw_threads 
 noinst_PROGRAMS                   += examples/mio_rw_lock 
 noinst_PROGRAMS                   += examples/mio_hsm 
-noinst_PROGRAMS                   += examples/mio_io_perf 
+noinst_PROGRAMS                   += examples/mio_telemetry_test 
+noinst_PROGRAMS                   += examples/mio_io_perf
 
 examples_mio_cat_CPPFLAGS = -DMIO_TARGET='mio_cat' $(AM_CPPFLAGS)
 examples_mio_cat_LDADD    = $(top_builddir)/lib/libmio.la
@@ -152,6 +160,9 @@ examples_mio_kvs_del_pairs_LDADD    = $(top_builddir)/lib/libmio.la
 
 examples_mio_comp_obj_example_CPPFLAGS = -DMIO_TARGET='mio_comp_obj_example' $(AM_CPPFLAGS)
 examples_mio_comp_obj_example_LDADD    = $(top_builddir)/lib/libmio.la
+
+examples_mio_telemetry_test_CPPFLAGS = -DMIO_TARGET='mio_telemetry_test' $(AM_CPPFLAGS)
+examples_mio_telemetry_test_LDADD    = $(top_builddir)/lib/libmio.la
 
 examples_mio_rw_threads_CPPFLAGS = -DMIO_TARGET='mio_rw_threads' $(AM_CPPFLAGS)
 examples_mio_rw_threads_LDADD    = $(top_builddir)/lib/libmio.la -lpthread -lcrypto -lssl

@@ -40,6 +40,7 @@ enum conf_key {
 	MIO_LOG_LEVEL,
 	MIO_LOG_FILE,
 	MIO_DRIVER,
+	MIO_TELEMETRY_STORE,
 
 	/* Motr driver. "MOTR_CONFIG" is the key for Motr section. */
 	MOTR_CONFIG,
@@ -94,6 +95,10 @@ struct conf_entry conf_table[] = {
 	},
 	[MIO_DRIVER] = {
 		.name = "MIO_DRIVER",
+		.type = MIO
+	},
+	[MIO_TELEMETRY_STORE] = {
+		.name = "MIO_TELEMETRY_STORE",
 		.type = MIO
 	},
 
@@ -174,6 +179,7 @@ enum conf_block_sequence {
 static enum conf_block_sequence conf_which_blk_seq = 0;
 
 static enum mio_driver_id mio_inst_drv_id;
+static enum mio_telemetry_store_type mio_inst_telem_store_type = 0;
 static void *mio_driver_confs[MIO_DRIVER_NUM];
 static struct mio_motr_config *motr_conf;
 
@@ -210,6 +216,20 @@ static enum mio_driver_id conf_get_driver_id(const char *str)
 		drv_id = MIO_MOTR;
 
 	return drv_id;
+}
+
+static enum mio_telemetry_store_type
+conf_get_telem_store_type(const char *str)
+{
+	enum mio_telemetry_store_type type = MIO_TM_ST_INVALID;
+
+	assert(str != NULL);
+	if (!strcmp(str, "ADDB"))
+		type = MIO_TM_ST_ADDB;
+	else if (!strcmp(str, "LOG"))
+		type = MIO_TM_ST_LOG;
+
+	return type;
 }
 
 static enum mio_log_level conf_get_log_level(const char *str)
@@ -413,6 +433,12 @@ static int conf_extract_value(enum conf_key key, char *value)
 		if (mio_inst_drv_id == MIO_DRIVER_INVALID)
 			rc = -EINVAL;
 		break;
+	case MIO_TELEMETRY_STORE:
+		assert(mio_instance != NULL && value != NULL);
+		mio_inst_telem_store_type = conf_get_telem_store_type(value);
+		if (mio_inst_telem_store_type == MIO_TM_ST_INVALID)
+			rc = -EINVAL;
+		break;
 	case MIO_LOG_LEVEL:
 		assert(mio_instance != NULL);
 		mio_instance->m_log_level = conf_get_log_level(value);
@@ -572,6 +598,7 @@ int mio_conf_init(const char *config_file)
 
 	/* Set driver properly. */
 	mio_instance->m_driver_id = mio_inst_drv_id;
+	mio_instance->m_telem_store_type = mio_inst_telem_store_type;
 	mio_instance->m_driver = mio_driver_get(mio_inst_drv_id);
 	mio_instance->m_driver_confs = mio_driver_confs[mio_inst_drv_id];
 
