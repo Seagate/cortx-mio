@@ -27,17 +27,20 @@ enum {
 
 void print_u16(char *buf, uint16_t value)
 {
-	sprintf(buf, "%s %x", buf, value);
+	buf += strlen(buf);
+	sprintf(buf, " %u", value);
 }
 
 void print_u32(char *buf, uint32_t value)
 {
-	sprintf(buf, "%s %x", buf, value);
+	buf += strlen(buf);
+	sprintf(buf, " %u", value);
 }
 
 void print_u64(char *buf, uint64_t value)
 {
-	sprintf(buf, "%s %"PRIx64"", buf, value);
+	buf += strlen(buf);
+	sprintf(buf, " %"PRIu64"", value);
 }
 
 int print_telemetry_rec_array(char *buf, struct mio_telemetry_rec *rec)
@@ -110,7 +113,7 @@ int print_telemetry_rec(struct mio_telemetry_rec *rec)
 	return rc;
 }
 
-void parse(FILE *fp)
+int parse(FILE *fp)
 {
 	int rc = 0;
 	struct mio_telemetry_store store;
@@ -119,13 +122,16 @@ void parse(FILE *fp)
 	store.mts_parse_stream = (void *)fp;
 	while (1) {
 		rc = mio_telemetry_parse(&store, &rec);
-		if (rc == EOF)
+		if (rc == EOF) {
+			rc = 0;
 			break;
-		else if (rc < 0)
+		} else if (rc < 0)
 			continue;
 
 		print_telemetry_rec(&rec);
 	}
+
+	return rc;
 }
 
 int main(int argc, char **argv)
@@ -144,7 +150,7 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-	mio_telemetry_init();
+	mio_telemetry_init(MIO_TM_ST_ADDB);
 	parse(fp);
 	mio_telemetry_fini();
 

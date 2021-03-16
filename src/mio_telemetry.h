@@ -131,7 +131,7 @@ int mio_telemetry_advertise(const char *topic,
 int mio_telemetry_parse(struct mio_telemetry_store *sp,
 			struct mio_telemetry_rec *rec);
 
-int mio_telemetry_init();
+int mio_telemetry_init(enum mio_telemetry_store_type type);
 void mio_telemetry_fini();
 
 /* Helper functions. */

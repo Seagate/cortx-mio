@@ -269,15 +269,20 @@ int mio_telemetry_parse(struct mio_telemetry_store *sp,
 	return rc;
 }
 
-int mio_telemetry_init()
+int mio_telemetry_init(enum mio_telemetry_store_type type)
 {
-	if (mio_instance->m_telem_store_type == MIO_TM_ST_ADDB)
+	int rc = 0;
+
+	if (type == MIO_TM_ST_ADDB)
 		mio_telem_rec_ops = &mio_motr_addb_rec_ops;
-	return 0;
+	else
+		rc = -EOPNOTSUPP;
+	return rc;
 }
 
 void mio_telemetry_fini()
 {
+	mio_telem_rec_ops = NULL;
 	return;
 }
 /*
