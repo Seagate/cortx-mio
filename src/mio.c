@@ -899,7 +899,11 @@ int mio_init(const char *yaml_conf)
 		goto error;
 	}
 
-	mio_telemetry_init();
+	rc = mio_telemetry_init(mio_instance->m_telem_store_type);
+	if (rc < 0) {
+		mio_log(MIO_ERROR, "Initialising MIO telemetry failed!\n");
+		goto error;
+	}
 
 	mio_hints_init(&mio_sys_hints);
 

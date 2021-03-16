@@ -81,7 +81,6 @@ int main(int argc, char **argv)
 	mio_cmd_obj_args_init(argc, argv, &telem_params, &telem_usage);
 
 	rc = mio_init(telem_params.cop_conf_fname);
-	rc = 1;
 	if (rc < 0) {
 		mio_cmd_error("Initialising MIO failed", rc);
 		exit(EXIT_FAILURE);
