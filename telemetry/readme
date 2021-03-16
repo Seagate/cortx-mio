@@ -1,0 +1,71 @@
+
+Note: All the analysis tool in MIO telemetry directory are modified from Motr's
+Chronometry toolset,
+https://github.com/Seagate/cortx-motr/tree/main/scripts/addb-py/chronometry.
+
+Workflow to collect, parse and analyse ADDB telemetry records.
+
+(0) Prerequisite to run the analysis utility.
+
+    python3.x (3.6.8 and 3.9.2 have been tested.)
+
+    python packages:
+    diGraph
+    graphviz
+    matplotlib
+    numpy
+    peewee
+    plumbum
+    python-dateutil
+    PyYAML
+    tqdm
+
+(1) Collect ADDB stobs.
+
+    Motr services (default): /var/motr/sysxxxx/{confd,ha,iosxxx, mds}/o/
+
+    MIO and Motr client: ADDB must have been turned on by setting
+    MIO_TELEMETRY_STORE to ADDB. A directory named addb_xxxx will be
+    created under the application's current working directory. The
+    ADDB records can be found in addb_xxxx/o/
+
+(2) Use m0addb2dump to parse addb records.
+
+    The command to parse ADDB logs would be:
+
+    $sudo m0addb2dump -f -- addb_stob > dump_xx.txt
+
+    If motr is installed with RPM packages, m0addb2dump should have
+    been shipped with the packages. If you have motr source, m0addb2dump
+    locates at cortx-motr/utils/.
+
+    This dump_xx.txt is the text representation of ADDB records. xx is
+    the number assigned to each addb stob.
+
+    Option `-f` is used to output each ADDB record in one single line.
+
+(3) Filter out MIO specific records and  decode those records. 
+
+    $ cd telemetry
+    $ ./mio_addb_parser.sh dump_xx.txt
+
+    dump_xx.txt is the one generated in the step (2) above. 
+
+(4) mio_addb2db.py to create database tables from decodes records.
+
+    $ python3 mio_addb2db.py --dumps dump_xx.txt
+
+(4) MIO shows a few examples of possible analysis.
+
+    Histogram of MIO IO operation size, operation time. For example, the
+    following command creates histogram of MIO write operation's execution
+    time.
+
+    $ python3 mio_op_time_hist.py -f png -o write.png -v -u ms -p mio_write [[mio-obj-op-init,mio-op-fini]]
+
+    Zoom-in (break-down) analysis on MIO IO operation, combining with Motr
+    operation analysis.
+
+    $ python3 mio_op_zoomin.py --ops op_id -u ms
+
+
