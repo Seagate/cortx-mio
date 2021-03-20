@@ -13,7 +13,7 @@ nobase_mio_include_HEADERS += src/mio.h \
 
 lib_libmio_la_SOURCES += src/mio_conf.c src/logger.c src/utils.c \
 			 src/mio.c src/mio_driver.c src/hints.c \
-			 src/mio_telemetry.c \
+			 src/mio_telemetry.c src/telemetry_log.c \
 			 src/driver_motr.c src/driver_motr_obj.c \
 			 src/driver_motr_kvs.c src/driver_motr_comp_obj.c \
 			 src/driver_motr_addb.c

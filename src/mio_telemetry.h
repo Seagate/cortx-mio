@@ -120,25 +120,66 @@ struct mio_telemetry_rec_ops {
 	
 };
 
-extern struct mio_telemetry_rec_ops mio_motr_addb_rec_ops;
+struct mio_telemetry_conf {
+	enum mio_telemetry_store_type mtc_type;
+	/* Prefix added to the beginning of a telemetry record. */
+	char *mtc_prefix;
+	bool mtc_is_parser;
+	void *mtc_store_conf;
+};
 
-int mio_telemetry_array_advertise(char *topic,
-				  enum mio_telemetry_type type,
-				  int nr_elms, ...);
+extern struct mio_telemetry_rec_ops mio_motr_addb_rec_ops;
+extern struct mio_telemetry_rec_ops mio_telem_log_rec_ops;
+
+/**
+ * MIO telemetry APIs.
+ *
+ * (1) Initialise and finalise telemetry subsystem.
+ * mio_telemetry_init() and mio_telemetry_fini().
+ *
+ * @param conf Telemetry configuration parameters, including the type
+ * of telemetry store and store specific parameters. For example, if
+ * MIO_TM_ST_LOG is selected as telemetry backend store. The caller
+ * sets the mio_telemetry_conf::mtc_store_conf to the directory of log
+ * files.
+ * @return = 0 for success, anything else for an error.
+ *
+ * (2) Output and store telemetry a record: mio_telemetry_advertise()
+ * and mio_telemetry_array_advertise()
+ * mio_telemetry_array_advertise() is a wrapper function of
+ * mio_telemetry_advertise() for an array of data.
+ *
+ * @param topic. The `topic` string is used to identify where the
+ * record is created and its purpose.
+ * @param type Data value type, see `enum mio_telemetry_type` for details.
+ * @param value Pointer to data value.
+ * @return = 0 for success, anything else for an error.
+ *
+ * (3) Parse a record.
+ * mio_telemetry_parse()
+ *
+ * @param sp. Pointer to a telemetry store. For a parser, set
+ * mio_telemetry_store::mts_parse_stream to the input telemetry stream.
+ * For example, the parse stream for log is set to the file stream of
+ * the log file.
+ * @param rec[out] The pointer to the decoded record.   
+ * @return = 0 for success, anything else for an error.
+ */
 int mio_telemetry_advertise(const char *topic,
 			   enum mio_telemetry_type type,
 			   void *value);
+int mio_telemetry_array_advertise(char *topic,
+				  enum mio_telemetry_type type,
+				  int nr_elms, ...);
 int mio_telemetry_parse(struct mio_telemetry_store *sp,
 			struct mio_telemetry_rec *rec);
 
-int mio_telemetry_init(enum mio_telemetry_store_type type);
+int mio_telemetry_init(struct mio_telemetry_conf *conf);
 void mio_telemetry_fini();
 
 /* Helper functions. */
-int mio_telemetry_value_len(enum mio_telemetry_type type, void *value);
-int mio_telemetry_rec_len(const char *topic,
-			  enum mio_telemetry_type type,
-			  void *value);
+int mio_telemetry_alloc_value(enum mio_telemetry_type type, void **value);
+
 #endif
 
 /*

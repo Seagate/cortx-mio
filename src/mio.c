@@ -866,6 +866,7 @@ bool mio_obj_pool_id_cmp(struct mio_pool_id *pool_id1,
 int mio_init(const char *yaml_conf)
 {
 	int rc;
+	struct mio_telemetry_conf telem_conf;
 
 	mio_instance = mio_mem_alloc(sizeof *mio_instance);
 	if (mio_instance == NULL)
@@ -887,7 +888,7 @@ int mio_init(const char *yaml_conf)
 		goto error;
 	}
 
-	rc = mio_log_init(mio_instance->m_log_level, mio_instance->m_log_file);
+	rc = mio_log_init(mio_instance->m_log_level, mio_instance->m_log_dir);
 	if (rc < 0) {
 		fprintf(stderr, "Failed to initialise logging sub-system. \n");
 		goto error;
@@ -899,7 +900,11 @@ int mio_init(const char *yaml_conf)
 		goto error;
 	}
 
-	rc = mio_telemetry_init(mio_instance->m_telem_store_type);
+	mio_memset(&telem_conf, 0, sizeof telem_conf);
+	telem_conf.mtc_type = mio_instance->m_telem_store_type;
+	if (telem_conf.mtc_type == MIO_TM_ST_LOG)
+		telem_conf.mtc_store_conf = mio_instance->m_log_dir;
+	rc = mio_telemetry_init(&telem_conf);
 	if (rc < 0) {
 		mio_log(MIO_ERROR, "Initialising MIO telemetry failed!\n");
 		goto error;

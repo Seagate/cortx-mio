@@ -18,7 +18,7 @@
 
 static void usage()
 {
-	fprintf(stderr, "Usage: mio_telemetry_parser files.\n");
+	fprintf(stderr, "Usage: mio_telemetry_parser files [addb | log].\n");
 }
 
 enum {
@@ -138,8 +138,10 @@ int main(int argc, char **argv)
 {
 	char *fname;
 	FILE *fp;
+	struct mio_telemetry_conf conf;
+	enum mio_telemetry_store_type type;
 
-	if (argc < 2) {
+	if (argc < 3) {
 		usage();
 		exit(EXIT_FAILURE);
 	}
@@ -150,7 +152,21 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-	mio_telemetry_init(MIO_TM_ST_ADDB);
+	if (!strcmp(argv[2], "addb"))
+		type = MIO_TM_ST_ADDB;
+	if (!strcmp(argv[2], "log"))
+		type = MIO_TM_ST_LOG;
+	else {
+		fprintf(stderr,
+			"Unsupported telemetry store type: %s.",
+			argv[2]);
+		usage();
+		exit(EXIT_FAILURE);
+	}
+	conf.mtc_type = type;
+	conf.mtc_is_parser = true;
+
+	mio_telemetry_init(&conf);
 	parse(fp);
 	mio_telemetry_fini();
 

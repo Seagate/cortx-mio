@@ -394,6 +394,8 @@ void mio_memset(void *p, int c, size_t size);
 void mio_mem_copy(void *to, void *from, size_t size);
 
 uint64_t mio_now();
+uint64_t mio_time_seconds(uint64_t time_in_nanosecs);
+uint64_t mio_time_nanoseconds(uint64_t time_in_nanosecs);
 
 uint64_t mio_byteorder_cpu_to_be64(uint64_t cpu_64bits);
 uint64_t mio_byteorder_be64_to_cpu(uint64_t big_endian_64bits);

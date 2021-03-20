@@ -38,7 +38,7 @@ enum conf_key {
 	/* MIO */
 	MIO_CONFIG = 0,
 	MIO_LOG_LEVEL,
-	MIO_LOG_FILE,
+	MIO_LOG_DIR,
 	MIO_DRIVER,
 	MIO_TELEMETRY_STORE,
 
@@ -85,8 +85,8 @@ struct conf_entry conf_table[] = {
 		.name = "MIO_CONFIG",
 		.type = MIO
 	},
-	[MIO_LOG_FILE] = {
-		.name = "MIO_LOG_FILE",
+	[MIO_LOG_DIR] = {
+		.name = "MIO_LOG_DIR",
 		.type = MIO
 	},
 	[MIO_LOG_LEVEL] = {
@@ -221,7 +221,7 @@ static enum mio_driver_id conf_get_driver_id(const char *str)
 static enum mio_telemetry_store_type
 conf_get_telem_store_type(const char *str)
 {
-	enum mio_telemetry_store_type type = MIO_TM_ST_INVALID;
+	enum mio_telemetry_store_type type = MIO_TM_ST_NONE;
 
 	assert(str != NULL);
 	if (!strcmp(str, "ADDB"))
@@ -243,6 +243,8 @@ static enum mio_log_level conf_get_log_level(const char *str)
 		return MIO_INFO;
 	else if (!strcmp(str, "MIO_TRACE"))
 		return MIO_TRACE;
+	else if (!strcmp(str, "MIO_TELEMETRY"))
+		return MIO_TELEMETRY;
 	else if (!strcmp(str, "MIO_DEBUG"))
 		return MIO_DEBUG;
 	else
@@ -445,9 +447,9 @@ static int conf_extract_value(enum conf_key key, char *value)
 		if (mio_instance->m_log_level == MIO_LOG_INVALID)
 			rc = -EINVAL;
 		break;
-	case MIO_LOG_FILE:
+	case MIO_LOG_DIR:
 		assert(mio_instance != NULL && value != NULL);
-		rc = conf_copy_str(&mio_instance->m_log_file, value);
+		rc = conf_copy_str(&mio_instance->m_log_dir, value);
 		break;
 	case MOTR_INST_ADDR:
 		rc = conf_copy_str(&motr_conf->mc_motr_local_addr, value);
