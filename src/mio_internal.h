@@ -115,6 +115,11 @@ struct mio_kvs_ops {
 		       int nr_kvps, struct mio_kv_pair *kvps,
 		       int32_t *rcs, struct mio_op *op);
 
+	int (*mko_next)(struct mio_kvs_id *kvs_id,
+			int nr_kvps, struct mio_kv_pair *kvps,
+			bool exclude_start_key, int32_t *rcs,
+			struct mio_op *op);
+
 	int (*mko_put)(struct mio_kvs_id *kvs_id,
 		       int nr_kvps, struct mio_kv_pair *kvps,
 		       int32_t *rcs, struct mio_op *op);

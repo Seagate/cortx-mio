@@ -550,6 +550,26 @@ int mio_kvs_pair_get(struct mio_kvs_id *kid,
 	return rc;
 }
 
+int mio_kvs_pair_next(struct mio_kvs_id *kid,
+		      int nr_kvps, struct mio_kv_pair *kvps,
+		      bool exclude_start_key, int32_t *rcs,
+		      struct mio_op *op)
+{
+	int rc;
+
+	rc = kvs_driver_check();
+	if (rc < 0)
+		return rc;
+	if (kid == NULL || op == NULL)
+		return -EINVAL;
+
+	rc = kvs_op_init(op, kid, MIO_KVS_GET)? :
+	     drv_kvs_ops->mko_next(kid, nr_kvps, kvps,
+				   exclude_start_key, rcs, op);
+	return rc;
+}
+
+
 int mio_kvs_pair_put(struct mio_kvs_id *kid,
                      int nr_kvps, struct mio_kv_pair *kvps,
                      int32_t *rcs, struct mio_op *op)

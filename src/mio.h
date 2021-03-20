@@ -594,7 +594,7 @@ extern struct mio_kvs mio_obj_attrs_kvs;
  * - 'kvps' key-value pairs should set mio_kv_pair::key’s for
  *   records being requested and set mio_kv_pair::val’s to NULLs.
  *   At least one key should be specified.
- * - After successful operation completion retrieved record
+ * - After successful operation retrieved record
  *   values are stored in mio_kv_pair::mkp_val. If some value
  *   retrieval has failed, then corresponding element in 'rcs' array
  *   is set to a suitable error code.
@@ -603,6 +603,26 @@ extern struct mio_kvs mio_obj_attrs_kvs;
  * - 'kvps' key-value pairs should set mio_kv_pair::key’s
  *   for records being requested and set mio_kv_pair::val’s
  *   to corresponding values.
+ *
+ * For mio_kvs_pair_next():
+ * - The first element's key of 'kvps' should be set to the starting key
+ *   and other keys are set to NULLs. All value parts of `kvps` should
+ *   be set to NULLs.
+ *  
+ *   If the starting key is set to NULL, mio_kvs_pair_next() will return
+ *   the required number of key/value pairs starting with the smallest
+ *   key.
+ *
+ *   If 'exclude_start_key' is set to 'true', mio_kvs_pair_next() will
+ *   return pairs starting with the key right after the starting key.
+ *
+ * - After successful operation retrieved record keys and
+ *   values are stored in 'kvps'. If some value
+ *   retrieval has failed, then corresponding element in 'rcs' array
+ *   is set to a suitable error code. If the error code is set to
+ *   EOF, meaning that there are no more pairs. An example in
+ *   examples/kvs.c::kvs_query_next() shows how to handle returned
+ *   error codes.
  *
  * Error handling:
  * 'rcs' holds an array of per-item return codes for the operation.
@@ -632,6 +652,10 @@ extern struct mio_kvs mio_obj_attrs_kvs;
 int mio_kvs_pair_get(struct mio_kvs_id *kvs_id,
                      int nr_kvps, struct mio_kv_pair *kvps,
                      int32_t *rcs, struct mio_op *op);
+
+int mio_kvs_pair_next(struct mio_kvs_id *kvs_id,
+		      int nr_kvps, struct mio_kv_pair *kvps,
+		      bool exclude_start_key, int32_t *rcs, struct mio_op *op);
 
 int mio_kvs_pair_put(struct mio_kvs_id *kvs_id,
                      int nr_kvps, struct mio_kv_pair *kvps,
