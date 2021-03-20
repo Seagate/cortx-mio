@@ -55,6 +55,16 @@ uint64_t mio_now()
         return tv.tv_sec * TIME_ONE_SECOND + tv.tv_usec * 1000;
 }
 
+uint64_t mio_time_seconds(uint64_t time_in_nanosecs)
+{
+	return time_in_nanosecs / TIME_ONE_SECOND;
+}
+
+uint64_t mio_time_nanoseconds(uint64_t time_in_nanosecs)
+{
+	return time_in_nanosecs % TIME_ONE_SECOND;
+}
+
 uint64_t mio_byteorder_cpu_to_be64(uint64_t cpu_64bits)
 {
         return __cpu_to_be64(cpu_64bits);

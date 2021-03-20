@@ -68,13 +68,68 @@ enum {
 	MIO_MOTR_ADDB_MAX_PAYLOAD = 120
 };
 
-void motr_addb_rec_get_u8(char **rec, uint8_t *val)
+static int motr_addb_rec_value_len(enum mio_telemetry_type type, void *value)
+{
+	int len = -EINVAL;
+	struct mio_telemetry_array *arr;
+
+	switch (type) {
+	case MIO_TM_TYPE_UINT16:
+		len = 2;
+		break;
+	case MIO_TM_TYPE_UINT32:
+		len = 4;
+		break;
+	case MIO_TM_TYPE_UINT64:
+	case MIO_TM_TYPE_TIMESPAN:
+	case MIO_TM_TYPE_TIMEPOINT:
+		len = 8;
+		break;
+	case MIO_TM_TYPE_ARRAY_UINT16:
+		arr = (struct mio_telemetry_array *)value;
+		len = arr->mta_nr_elms * sizeof(uint16_t);
+		break;
+	case MIO_TM_TYPE_ARRAY_UINT32:
+		arr = (struct mio_telemetry_array *)value;
+		len = arr->mta_nr_elms * sizeof(uint32_t);
+		break;
+	case MIO_TM_TYPE_ARRAY_UINT64:
+		arr = (struct mio_telemetry_array *)value;
+		len = arr->mta_nr_elms * sizeof(uint64_t);
+		break;
+	default:
+		len = -EINVAL;
+		break;
+	}
+
+	return len;
+}
+
+static int motr_addb_rec_len(const char *topic,
+			     enum mio_telemetry_type type,
+			     void *value)
+{
+	int topic_len;
+	int val_len;
+	int buf_len;
+
+	assert(topic != NULL);
+	topic_len = strlen(topic);
+	val_len = motr_addb_rec_value_len(type, value);
+	if (val_len < 0)
+		return val_len;
+	buf_len = 2 + topic_len + 1 + val_len + 1;
+	return buf_len;
+}
+
+
+static void motr_addb_rec_get_u8(char **rec, uint8_t *val)
 {
 	mio_mem_copy(val, *rec, sizeof(uint8_t));
 	*rec += sizeof(uint8_t);
 }
 
-void motr_addb_rec_get_u16(char **rec, uint16_t *val)
+static void motr_addb_rec_get_u16(char **rec, uint16_t *val)
 {
 	uint16_t le16_val;
 
@@ -83,7 +138,7 @@ void motr_addb_rec_get_u16(char **rec, uint16_t *val)
 	*rec += sizeof(uint16_t);
 }
 
-void motr_addb_rec_get_u32(char **rec, uint32_t *val)
+static void motr_addb_rec_get_u32(char **rec, uint32_t *val)
 {
 	uint32_t le32_val;
 
@@ -92,7 +147,7 @@ void motr_addb_rec_get_u32(char **rec, uint32_t *val)
 	*rec += sizeof(uint32_t);
 }
 
-void motr_addb_rec_get_u64(char **rec, uint64_t *val)
+static void motr_addb_rec_get_u64(char **rec, uint64_t *val)
 {
 	uint64_t le64_val;
 
@@ -101,7 +156,7 @@ void motr_addb_rec_get_u64(char **rec, uint64_t *val)
 	*rec += sizeof(uint64_t);
 }
 
-int
+static int
 motr_addb_rec_get_array(char **rec, enum mio_telemetry_type type,
 			struct mio_telemetry_array *array)
 {
@@ -144,7 +199,7 @@ motr_addb_rec_get_array(char **rec, enum mio_telemetry_type type,
 	return 0;
 }
 
-void motr_addb_rec_get_string(char **rec, char **string)
+static void motr_addb_rec_get_string(char **rec, char **string)
 {
 	uint8_t len;
 
@@ -163,48 +218,7 @@ void motr_addb_rec_get_string(char **rec, char **string)
 	*rec += len;
 }
 
-int motr_addb_rec_alloc_value(enum mio_telemetry_type type, void **value)
-{
-	int rc = 0;
-	int size;
-
-	*value = NULL;
-	if (type == MIO_TM_TYPE_NONE)
-		return 0;
-
-	switch (type) {
-	case MIO_TM_TYPE_UINT16:
-		size = sizeof(uint16_t);
-		break;
-	case MIO_TM_TYPE_UINT32:
-		size = sizeof(uint32_t);
-		break;
-	case MIO_TM_TYPE_UINT64:
-	case MIO_TM_TYPE_TIMESPAN:
-	case MIO_TM_TYPE_TIMEPOINT:
-		size = sizeof(uint64_t);
-		break;
-	case MIO_TM_TYPE_ARRAY_UINT16:
-	case MIO_TM_TYPE_ARRAY_UINT32:
-	case MIO_TM_TYPE_ARRAY_UINT64:
-		size = sizeof(struct mio_telemetry_array);
-		break;
-	default:
-		rc = -EINVAL;
-		break;
-	}
-
-	if (rc < 0)
-		return rc;
-
-	*value = mio_mem_alloc(size);
-	if (*value == NULL)
-		return -ENOMEM;
-	else
-		return 0;
-}
-
-int
+static int
 motr_addb_rec_get_value(char **rec, enum mio_telemetry_type type, void **value)
 {
 	int rc = 0;
@@ -213,7 +227,7 @@ motr_addb_rec_get_value(char **rec, enum mio_telemetry_type type, void **value)
 	if (type == MIO_TM_TYPE_NONE)
 		return 0;
 
-	rc = motr_addb_rec_alloc_value(type, value);
+	rc = mio_telemetry_alloc_value(type, value);
 	if (rc < 0)
 		return rc;
 
@@ -243,13 +257,13 @@ motr_addb_rec_get_value(char **rec, enum mio_telemetry_type type, void **value)
 	return rc;
 }
 
-void motr_addb_rec_add_u8(char **rec, uint8_t val)
+static void motr_addb_rec_add_u8(char **rec, uint8_t val)
 {
 	mio_mem_copy(*rec, &val, sizeof(uint8_t));
 	*rec += sizeof(uint8_t);
 }
 
-void motr_addb_rec_add_u16(char **rec, uint16_t val)
+static void motr_addb_rec_add_u16(char **rec, uint16_t val)
 {
 	uint16_t le16_val;
 
@@ -258,7 +272,7 @@ void motr_addb_rec_add_u16(char **rec, uint16_t val)
 	*rec += sizeof(uint16_t);
 }
 
-void motr_addb_rec_add_u32(char **rec, uint32_t val)
+static void motr_addb_rec_add_u32(char **rec, uint32_t val)
 {
 	uint32_t le32_val;
 
@@ -267,7 +281,7 @@ void motr_addb_rec_add_u32(char **rec, uint32_t val)
 	*rec += sizeof(uint32_t);
 }
 
-void motr_addb_rec_add_u64(char **rec, uint64_t val)
+static void motr_addb_rec_add_u64(char **rec, uint64_t val)
 {
 	uint64_t le64_val;
 
@@ -276,7 +290,7 @@ void motr_addb_rec_add_u64(char **rec, uint64_t val)
 	*rec += sizeof(uint64_t);
 }
 
-int
+static int
 motr_addb_rec_add_array(char **rec, enum mio_telemetry_type type, void *value)
 {
 	int i;
@@ -317,7 +331,7 @@ motr_addb_rec_add_array(char **rec, enum mio_telemetry_type type, void *value)
 	return 0;
 }
 
-void motr_addb_rec_add_string(char **rec, const char *string)
+static void motr_addb_rec_add_string(char **rec, const char *string)
 {
 	uint8_t str_len;
 
@@ -328,7 +342,7 @@ void motr_addb_rec_add_string(char **rec, const char *string)
 	*rec += str_len;
 }
 
-int
+static int
 motr_addb_rec_add_value(char **rec, enum mio_telemetry_type type, void *value)
 {
 	int rc = 0;
@@ -363,7 +377,7 @@ motr_addb_rec_add_value(char **rec, enum mio_telemetry_type type, void *value)
 	return rc;
 }
 
-int
+static int
 mio_motr_addb_encode(const struct mio_telemetry_rec *rec, char **buf, int *len)
 {
 	int i;
@@ -382,7 +396,7 @@ mio_motr_addb_encode(const struct mio_telemetry_rec *rec, char **buf, int *len)
 	if (type <= MIO_TM_TYPE_INVALID || type >= MIO_TM_TYPE_NR)
 		return -EINVAL;
 
-	rec_len = mio_telemetry_rec_len(topic, type, value);
+	rec_len = motr_addb_rec_len(topic, type, value);
 	if (rec_len < 0)
 		return rec_len;
 	rec_len = ((rec_len + 7) / 8) * 8; /* Rounded to multiples of 8*/
@@ -418,7 +432,7 @@ exit:
 	return rc;
 }
 
-int mio_motr_addb_store(void *dump_stream, const char *buf, int len)
+static int mio_motr_addb_store(void *dump_stream, const char *buf, int len)
 {
 	int nr_u64;
 
@@ -428,8 +442,8 @@ int mio_motr_addb_store(void *dump_stream, const char *buf, int len)
 	return 0;
 }
 
-int mio_motr_addb_decode(const char *buf, const char *head,
-			 const char *tail, struct mio_telemetry_rec *rec)
+static int mio_motr_addb_decode(const char *buf, const char *head,
+				const char *tail, struct mio_telemetry_rec *rec)
 {
 	int rc = 0;
 	uint16_t magic;
@@ -466,16 +480,16 @@ int mio_motr_addb_decode(const char *buf, const char *head,
 	if (rc < 0) {
 		mio_mem_free(rec->mtr_time_str);
 		mio_mem_free(topic);
+		return rc;
 	}
 
 	rec->mtr_topic = topic;
 	rec->mtr_type = type;
 	rec->mtr_value = value;
-
 	return rc;
 }
 
-void motr_addb_skip_delimiter(char **buf)
+static void motr_addb_skip_delimiter(char **buf)
 {
 	int len;
 	char *cursor;
@@ -490,7 +504,7 @@ void motr_addb_skip_delimiter(char **buf)
 	*buf = cursor;
 }
 
-void motr_addb_jump_to_delimiter(char **buf)
+static void motr_addb_jump_to_delimiter(char **buf)
 {
 	int len;
 	char *cursor;
@@ -505,7 +519,7 @@ void motr_addb_jump_to_delimiter(char **buf)
 	*buf = cursor;
 }
 
-int motr_addb_clean_rec(char *rec_buf, int rec_len, char **cleaned_rec)
+static int motr_addb_clean_rec(char *rec_buf, int rec_len, char **cleaned_rec)
 {
 	int rc = 0;
 	int cleaned_rec_len = 0;
@@ -568,8 +582,8 @@ int motr_addb_clean_rec(char *rec_buf, int rec_len, char **cleaned_rec)
  * the time and data these 2 fields.
  *
  */
-int mio_motr_addb_load(void *parse_stream, char **rec_buf,
-		       char **head, char **tail)
+static int mio_motr_addb_load(void *parse_stream, char **rec_buf,
+			      char **head, char **tail)
 {
 	int rc = 0;
 	int time_str_len = 0;
@@ -578,7 +592,7 @@ int mio_motr_addb_load(void *parse_stream, char **rec_buf,
 	size_t rec_len = 0;
 	char *time_str = NULL;
 	char *dirty_rec;
-	char *cleaned_rec;
+	char *cleaned_rec = NULL;
 	char *line = NULL;
 	char *end_of_rec = NULL;
 	char *clock;

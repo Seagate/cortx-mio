@@ -35,12 +35,19 @@
 
 # 2. Virtual machine configurations for development/test.
 
+## Example for using log file as telemetry backend.
+#MIO_CONFIG:
+#  MIO_LOG_DIR: /var/log/mio
+#  MIO_LOG_LEVEL: MIO_DEBUG 
+#  MIO_DRIVER: MOTR
+#  MIO_TELEMETRY_STORE: LOG
+
 #MIO_Config_Sections: [MIO_CONFIG, MOTR_CONFIG]
 MIO_CONFIG:
-  MIO_LOG_FILE:
+  MIO_LOG_DIR:
   MIO_LOG_LEVEL: MIO_DEBUG 
   MIO_DRIVER: MOTR
-#  MIO_TELEMETRY_STORE: ADDB
+  MIO_TELEMETRY_STORE: ADDB
 
 MOTR_CONFIG:
   MOTR_USER_GROUP: motr 

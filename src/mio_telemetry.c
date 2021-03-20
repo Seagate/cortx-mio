@@ -60,62 +60,50 @@
 static struct mio_telemetry_rec_ops *mio_telem_rec_ops = NULL;
 struct mio_telemetry_store mio_telemetry_streams;
 
-int mio_telemetry_value_len(enum mio_telemetry_type type, void *value)
+int mio_telemetry_alloc_value(enum mio_telemetry_type type, void **value)
 {
-	int len = -EINVAL;
-	struct mio_telemetry_array *arr;
+	int rc = 0;
+	int size;
+
+	*value = NULL;
+	if (type == MIO_TM_TYPE_NONE)
+		return 0;
 
 	switch (type) {
 	case MIO_TM_TYPE_UINT16:
-		len = 2;
+		size = sizeof(uint16_t);
 		break;
 	case MIO_TM_TYPE_UINT32:
-		len = 4;
+		size = sizeof(uint32_t);
 		break;
 	case MIO_TM_TYPE_UINT64:
 	case MIO_TM_TYPE_TIMESPAN:
 	case MIO_TM_TYPE_TIMEPOINT:
-		len = 8;
+		size = sizeof(uint64_t);
 		break;
 	case MIO_TM_TYPE_ARRAY_UINT16:
-		arr = (struct mio_telemetry_array *)value;
-		len = arr->mta_nr_elms * sizeof(uint16_t);
-		break;
 	case MIO_TM_TYPE_ARRAY_UINT32:
-		arr = (struct mio_telemetry_array *)value;
-		len = arr->mta_nr_elms * sizeof(uint32_t);
-		break;
 	case MIO_TM_TYPE_ARRAY_UINT64:
-		arr = (struct mio_telemetry_array *)value;
-		len = arr->mta_nr_elms * sizeof(uint64_t);
+		size = sizeof(struct mio_telemetry_array);
 		break;
 	default:
-		len = -EINVAL;
+		rc = -EINVAL;
 		break;
 	}
 
-	return len;
+	if (rc < 0)
+		return rc;
+
+	*value = mio_mem_alloc(size);
+	if (*value == NULL)
+		return -ENOMEM;
+	else
+		return 0;
 }
 
-int mio_telemetry_rec_len(const char *topic,
-			  enum mio_telemetry_type type,
-			  void *value)
-{
-	int topic_len;
-	int val_len;
-	int buf_len;
 
-	assert(topic != NULL);
-	topic_len = strlen(topic);
-	val_len = mio_telemetry_value_len(type, value);
-	if (val_len < 0)
-		return val_len;
-	buf_len = 2 + topic_len + 1 + val_len + 1;
-	return buf_len;
-}
-
-int telemetry_array_alloc(struct mio_telemetry_array *array,
-			  enum mio_telemetry_type type, int nr_elms)
+static int telemetry_array_alloc(struct mio_telemetry_array *array,
+				 enum mio_telemetry_type type, int nr_elms)
 {
 	int elm_size;
 
@@ -139,7 +127,7 @@ int telemetry_array_alloc(struct mio_telemetry_array *array,
 	return 0;
 }
 
-void telemetry_array_free(struct mio_telemetry_array *array)
+static void telemetry_array_free(struct mio_telemetry_array *array)
 {
 	if (array == NULL || array->mta_elms == NULL)
 		return;
@@ -269,14 +257,32 @@ int mio_telemetry_parse(struct mio_telemetry_store *sp,
 	return rc;
 }
 
-int mio_telemetry_init(enum mio_telemetry_store_type type)
+int mio_telemetry_init(struct mio_telemetry_conf *conf)
 {
 	int rc = 0;
+	enum mio_telemetry_store_type type = conf->mtc_type;
+	char *mio_log_dir;
 
-	if (type == MIO_TM_ST_ADDB)
+	if (type == MIO_TM_ST_NONE)
+		mio_telem_rec_ops = NULL;
+	else if (type == MIO_TM_ST_ADDB) {
+		rc = mio_instance_check();
+		if (rc < 0)
+			return rc;
+		if (mio_instance->m_driver_id != MIO_MOTR)
+			return -EINVAL;
 		mio_telem_rec_ops = &mio_motr_addb_rec_ops;
-	else
+	} else if (type == MIO_TM_ST_LOG) {
+		if (!conf->mtc_is_parser && mio_log_file == NULL) {
+			mio_log_dir = (char *)conf->mtc_store_conf;
+			rc = mio_log_init(MIO_TELEMETRY, mio_log_dir);
+			if (rc < 0)
+				return rc;
+		}
+		mio_telem_rec_ops = &mio_telem_log_rec_ops;
+	} else
 		rc = -EOPNOTSUPP;
+
 	return rc;
 }
 

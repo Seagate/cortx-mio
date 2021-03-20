@@ -798,7 +798,7 @@ struct mio {
 	enum mio_telemetry_store_type m_telem_store_type;
 	
 	enum mio_log_level m_log_level;
-	char *m_log_file;
+	char *m_log_dir;
 
 	enum mio_driver_id m_driver_id;
 	struct mio_driver *m_driver;

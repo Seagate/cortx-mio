@@ -16,10 +16,11 @@
 #include "obj.h"
 #include "helpers.h"
 
-static void telem_usage(FILE *file, char *prog_name)
-{
-	fprintf(file, "Usage: %s Test telemetry APIs.\n", prog_name);
-}
+/**
+ * MIO telemetry tests with log as backend. The tests also
+ * show how to use telemetry APIs without Motr or other storage
+ * drivers.
+ */
 
 void telem_tests()
 {
@@ -76,11 +77,12 @@ void telem_tests()
 int main(int argc, char **argv)
 {
 	int rc;
-	struct mio_cmd_obj_params telem_params;
+	struct mio_telemetry_conf telem_conf;
 
-	mio_cmd_obj_args_init(argc, argv, &telem_params, &telem_usage);
-
-	rc = mio_init(telem_params.cop_conf_fname);
+	memset(&telem_conf, 0, sizeof telem_conf);
+	telem_conf.mtc_type = MIO_TM_ST_LOG;
+	telem_conf.mtc_is_parser = false;
+	rc = mio_telemetry_init(&telem_conf);
 	if (rc < 0) {
 		mio_cmd_error("Initialising MIO failed", rc);
 		exit(EXIT_FAILURE);
@@ -88,8 +90,7 @@ int main(int argc, char **argv)
 
 	telem_tests();
 
-	mio_fini();
-	mio_cmd_obj_args_fini(&telem_params);
+	mio_telemetry_fini();
 	return rc;
 }
 
