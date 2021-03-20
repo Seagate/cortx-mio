@@ -56,15 +56,15 @@ static void motr_kvs_idx_fini_free(struct m0_idx *idx)
 
 static int
 motr_kvs_keys_vals_alloc(int opcode, int nr_kvps,
-			   struct m0_bufvec **ret_keys,
-			   struct m0_bufvec **ret_vals)
+			 struct m0_bufvec **ret_keys,
+			 struct m0_bufvec **ret_vals)
 {
 	int rc = 0;
         struct m0_bufvec *keys;
         struct m0_bufvec *vals = NULL;
 
 	assert(opcode == M0_IC_GET || opcode == M0_IC_PUT ||
-	       opcode == M0_IC_DEL);
+	       opcode == M0_IC_DEL || opcode == M0_IC_NEXT);
 
 	keys = mio__motr_bufvec_alloc(nr_kvps);
 	if (keys == NULL) {
@@ -91,10 +91,11 @@ error:
 }
 
 static int motr_kvs_query(struct m0_idx *idx, int opcode,
-			    int nr_kvps, struct mio_kv_pair *kvps, int32_t *rcs,
-			    struct m0_bufvec *keys, struct m0_bufvec *vals,
-			    mio_driver_op_postprocess query_pp, void *cb_args,
-			    struct mio_op *op)
+			  int nr_kvps, struct mio_kv_pair *kvps, int32_t *rcs,
+			  struct m0_bufvec *keys, struct m0_bufvec *vals,
+			  uint32_t flag,
+			  mio_driver_op_postprocess query_pp, void *cb_args,
+			  struct mio_op *op)
 {
 	int i;
 	int rc = 0;
@@ -102,7 +103,7 @@ static int motr_kvs_query(struct m0_idx *idx, int opcode,
 	struct m0_op *cops[1] = {NULL};
 
 	assert(opcode == M0_IC_GET || opcode == M0_IC_PUT ||
-	       opcode == M0_IC_DEL);
+	       opcode == M0_IC_DEL || opcode == M0_IC_NEXT);
 
 	set_vals = (opcode == M0_IC_PUT)? true : false;
 
@@ -119,7 +120,7 @@ static int motr_kvs_query(struct m0_idx *idx, int opcode,
 	}
 
 	/* Create index op. */
-	rc = m0_idx_op(idx, opcode, keys, vals, rcs, 0, &cops[0]);
+	rc = m0_idx_op(idx, opcode, keys, vals, rcs, flag, &cops[0]);
 	if (rc < 0)
 		goto error;
 
@@ -175,8 +176,8 @@ static int motr_kvs_get_pp(struct mio_op *op)
 }
 
 static int mio_motr_kvs_get(struct mio_kvs_id *kid,
-			      int nr_kvps, struct mio_kv_pair *kvps,
-			      int32_t *rcs, struct mio_op *op)
+			    int nr_kvps, struct mio_kv_pair *kvps,
+			    int32_t *rcs, struct mio_op *op)
 {
 	int rc;
 	struct motr_kvs_get_args *args;
@@ -205,8 +206,101 @@ static int mio_motr_kvs_get(struct mio_kvs_id *kid,
 	args->kga_idx = idx;
 
 	rc = motr_kvs_query(idx, M0_IC_GET,
-			      nr_kvps, kvps, rcs, keys, vals,
+			      nr_kvps, kvps, rcs, keys, vals, 0,
 			      motr_kvs_get_pp, args, op);
+	if (rc < 0) {
+		motr_kvs_idx_fini_free(idx);
+		mio_mem_free(args);
+	}
+	return rc;
+
+error:
+	motr_kvs_idx_fini_free(idx);
+	mio__motr_bufvec_free(keys);
+	mio__motr_bufvec_free(vals);
+	mio_mem_free(args);
+	return rc;
+}
+
+struct motr_kvs_next_args {
+	struct m0_bufvec *kna_rks; /* Returned keys from motr NEXT op. */
+	struct m0_bufvec *kna_rvs; /* Returned values from motr NEXT op. */
+	struct mio_kv_pair *kna_orig_pairs; /* Original pointer from app. */
+	struct m0_idx *kna_idx; /* The motr index for the GET op. */
+};
+
+static int motr_kvs_next_pp(struct mio_op *op)
+{
+	int i;
+	int nr_kvps;
+	struct motr_kvs_next_args *args;
+	struct mio_kv_pair *kvps;
+	struct m0_bufvec *rks;
+	struct m0_bufvec *rvs;
+	struct m0_op *cop = MIO_MOTR_OP(op);
+
+	assert(cop != NULL);
+	if (cop->op_sm.sm_state != M0_OS_STABLE)
+		return -EIO;
+
+	/* Copy returned values. */
+	args = (struct motr_kvs_next_args *)
+	       op->mop_drv_op_chain.mdoc_head->mdo_post_proc_data;
+	kvps = args->kna_orig_pairs;
+	rks  = args->kna_rks;
+	rvs  = args->kna_rvs;
+	nr_kvps = rvs->ov_vec.v_nr;
+	for (i = 0; i < nr_kvps; i++) {
+		kvps[i].mkp_key = rks->ov_buf[i];
+		kvps[i].mkp_klen = rks->ov_vec.v_count[i];
+		kvps[i].mkp_val = rvs->ov_buf[i];
+		kvps[i].mkp_vlen = rvs->ov_vec.v_count[i];
+	}
+
+	motr_kvs_idx_fini_free(args->kna_idx);
+	mio_mem_free(args);
+	return MIO_DRV_OP_FINAL;
+}
+
+static int mio_motr_kvs_next(struct mio_kvs_id *kid,
+			     int nr_kvps, struct mio_kv_pair *kvps,
+			     bool exclude_start_key, int32_t *rcs,
+			     struct mio_op *op)
+{
+	int rc;
+	uint32_t flag = 0;
+	struct motr_kvs_next_args *args;
+	struct m0_idx *idx;
+	struct m0_bufvec *keys = NULL;
+	struct m0_bufvec *vals = NULL;
+
+	rc = motr_kvs_idx_alloc_init(kid, &idx);
+	if (rc < 0)
+		return rc;
+
+	rc = motr_kvs_keys_vals_alloc(
+			M0_IC_NEXT, nr_kvps, &keys, &vals);
+	if (rc < 0)
+		goto error;
+
+	if (exclude_start_key)
+		flag = M0_OIF_EXCLUDE_START_KEY;
+
+	args = mio_mem_alloc(sizeof *args);
+	if (args == NULL) {
+		rc = -ENOMEM;
+		goto error;
+	}
+
+       	/* Save the arguments for post-processing. */
+	args->kna_rks = keys;
+	args->kna_rvs = vals;
+	args->kna_orig_pairs = kvps;
+	args->kna_idx = idx;
+
+	rc = motr_kvs_query(idx, M0_IC_NEXT,
+			    nr_kvps, kvps, rcs, keys, vals, flag,
+			    motr_kvs_next_pp, args, op);
 	if (rc < 0) {
 		motr_kvs_idx_fini_free(idx);
 		mio_mem_free(args);
@@ -233,8 +327,8 @@ static int motr_kvs_generic_pp(struct mio_op *op)
 }
 
 static int mio_motr_kvs_put(struct mio_kvs_id *kid,
-			      int nr_kvps, struct mio_kv_pair *kvps,
-			      int32_t *rcs, struct mio_op *op)
+			    int nr_kvps, struct mio_kv_pair *kvps,
+			    int32_t *rcs, struct mio_op *op)
 {
 	int rc;
 	struct m0_idx *idx;
@@ -253,13 +347,13 @@ static int mio_motr_kvs_put(struct mio_kvs_id *kid,
 	}
 
 	return motr_kvs_query(idx, M0_IC_PUT,
-				nr_kvps, kvps, rcs, keys, vals,
-				motr_kvs_generic_pp, idx, op);
+			      nr_kvps, kvps, rcs, keys, vals, 0,
+			      motr_kvs_generic_pp, idx, op);
 }
 
 static int mio_motr_kvs_del(struct mio_kvs_id *kid,
-			      int nr_kvps, struct mio_kv_pair *kvps,
-			      int32_t *rcs, struct mio_op *op)
+			    int nr_kvps, struct mio_kv_pair *kvps,
+			    int32_t *rcs, struct mio_op *op)
 {
 
 	int rc;
@@ -279,12 +373,12 @@ static int mio_motr_kvs_del(struct mio_kvs_id *kid,
 	}
 
 	return motr_kvs_query(idx, M0_IC_DEL,
-				nr_kvps, kvps, rcs, keys, vals,
-				motr_kvs_generic_pp, idx, op);
+			      nr_kvps, kvps, rcs, keys, vals, 0,
+			      motr_kvs_generic_pp, idx, op);
 }
 
 static int mio_motr_kvs_create_set(struct mio_kvs_id *kid,
-				     struct mio_op *op)
+				   struct mio_op *op)
 {
         int rc;
         struct m0_op *cops[1] = {NULL};
@@ -313,7 +407,7 @@ error:
 }
 
 static int mio_motr_kvs_del_set(struct mio_kvs_id *kid,
-				  struct mio_op *op)
+				struct mio_op *op)
 {
         int rc;
         struct m0_op *cops[1] = {NULL};
@@ -351,6 +445,7 @@ error:
 
 struct mio_kvs_ops mio_motr_kvs_ops = {
         .mko_get        = mio_motr_kvs_get,
+        .mko_next       = mio_motr_kvs_next,
         .mko_put        = mio_motr_kvs_put,
         .mko_del        = mio_motr_kvs_del,
         .mko_create_set = mio_motr_kvs_create_set,

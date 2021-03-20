@@ -17,7 +17,7 @@
 static void get_usage(FILE *file, char *prog_name)
 {
 	fprintf(file, "Usage: %s [OPTION]...\n"
-"Retrieve pairs from a key/value set.\n"
+"List pairs to a key/value set.\n"
 "\n"
 "Mandatory arguments to long options are mandatory for short options too.\n"
 "  -k, --kvset         ID        ID of the Motr index\n"
@@ -32,32 +32,32 @@ static void get_usage(FILE *file, char *prog_name)
 int main(int argc, char **argv)
 {
 	int rc;
-	struct mio_cmd_kvs_params get_params;
+	struct mio_cmd_kvs_params next_params;
 	FILE *log = NULL;
 
-	mio_cmd_kvs_args_init(argc, argv, &get_params, &get_usage);
-	if (get_params.ckp_log != NULL) {
-		log = fopen(get_params.ckp_log, "w");
+	mio_cmd_kvs_args_init(argc, argv, &next_params, &get_usage);
+	if (next_params.ckp_log != NULL) {
+		log = fopen(next_params.ckp_log, "w");
 		if (log == NULL)
 			exit(EXIT_FAILURE);
 	}
 
-	rc = mio_init(get_params.ckp_conf_fname);
+	rc = mio_init(next_params.ckp_conf_fname);
 	if (rc < 0) {
 		mio_cmd_error("Initialising MIO failed", rc);
 		exit(EXIT_FAILURE);
 	}
 
-	rc = mio_cmd_kvs_retrieve_pairs(&get_params.ckp_kid,
-					get_params.ckp_start_kno,
-					get_params.ckp_nr_pairs, log);
+	rc = mio_cmd_kvs_list_pairs(&next_params.ckp_kid,
+				    next_params.ckp_start_kno,
+				    next_params.ckp_nr_pairs, log);
 	if (rc < 0)
 		mio_cmd_error("Retrieving key-value pairs failed", rc);
 
 	mio_fini();
 	if(log != NULL)
 		fclose(log);
-	mio_cmd_kvs_args_fini(&get_params);
+	mio_cmd_kvs_args_fini(&next_params);
 	return rc;
 }
 

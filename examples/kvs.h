@@ -44,6 +44,8 @@ int mio_cmd_kvs_insert_pairs(struct mio_kvs_id *kid,
 			     int start_kno, int nr_pairs, FILE *log);
 int mio_cmd_kvs_retrieve_pairs(struct mio_kvs_id *kid,
 			       int start_kno, int nr_pairs, FILE *log);
+int mio_cmd_kvs_list_pairs(struct mio_kvs_id *kid,
+			   int start_kno, int nr_pairs, FILE *log);
 int mio_cmd_kvs_del_pairs(struct mio_kvs_id *kid,
 			  int start_kno, int nr_pairs, FILE *log);
 

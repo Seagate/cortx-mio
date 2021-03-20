@@ -68,6 +68,9 @@ examples_mio_kvs_insert_SOURCES = examples/mio_kvs_insert.c examples/kvs.c \
 examples_mio_kvs_retrieve_SOURCES = examples/mio_kvs_retrieve.c  examples/kvs.c \
 	  examples/helpers.c
 
+examples_mio_kvs_list_SOURCES = examples/mio_kvs_list.c  examples/kvs.c \
+	  examples/helpers.c
+
 examples_mio_kvs_del_pairs_SOURCES = examples/mio_kvs_del_pairs.c  examples/kvs.c \
 	  examples/helpers.c 
 

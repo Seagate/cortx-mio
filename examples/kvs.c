@@ -89,7 +89,6 @@ int kvs_fill_pairs(struct mio_kvs_id *kid, struct mio_kv_pair *pairs,
 	int   rc;
 	int   klen = 0;
 	int   vlen = 0;
-	char *prefix = NULL;
 	char *tmp_str = NULL;
 	char *key_str = NULL;
 	char *val_str = NULL;
@@ -99,10 +98,6 @@ int kvs_fill_pairs(struct mio_kvs_id *kid, struct mio_kv_pair *pairs,
 		return -EINVAL;
 
 	rc = -ENOMEM;
-	prefix = malloc(KVS_MAX_KEY_LEN);
-	if (prefix == NULL)
-		goto error;
-
 	tmp_str = malloc(KVS_MAX_KEY_LEN);
 	if (tmp_str == NULL)
 		goto error;
@@ -140,8 +135,6 @@ int kvs_fill_pairs(struct mio_kvs_id *kid, struct mio_kv_pair *pairs,
 	return 0;
 
 error:
-	if (prefix)
-		free(prefix);
 	if (tmp_str)
 		free(tmp_str);
 	if (key_str)
@@ -279,6 +272,62 @@ kvs_query_get(struct mio_kvs_id *kid, int start_kno, int nr_kvp, FILE *log)
 }
 
 static int
+kvs_query_next(struct mio_kvs_id *kid, int *last_kno,
+	       bool exclude_start_kno, int nr_kvp, FILE *log)
+{
+	int i;
+	int rc;
+	int *rcs;
+	uint64_t u1;
+	uint64_t u2;
+	struct mio_op op;
+	struct mio_kv_pair *pairs;
+
+	rcs = malloc(nr_kvp * sizeof(int));
+	if (rcs == NULL)
+		return -ENOMEM;
+	pairs = kvs_alloc_pairs(nr_kvp);
+	if (pairs == NULL) {
+		free(rcs);
+		return -ENOMEM;
+	}
+	kvs_fill_pairs(kid, pairs, *last_kno, 1, false);
+
+	mio_op_init(&op);
+	rc = mio_kvs_pair_next(
+		kid, nr_kvp, pairs, exclude_start_kno, rcs, &op);
+	if (rc != 0)
+		return rc;
+
+	rc = mio_cmd_wait_on_op(&op);
+	if (rc < 0)
+		fprintf(stderr, "Failed in retrieving kv pairs to aset!\n");
+	mio_op_fini(&op);
+
+	if (rc == 0 && log != NULL)
+		kvs_print_pairs(pairs, nr_kvp, log);
+
+	for (i = 0; i < nr_kvp; i++)
+		if (rcs[i] < 0)
+			break;
+	if (i > 0) {
+		rc = sscanf(pairs[i-1].mkp_key,
+			    "%"SCNx64":%"SCNx64":%d", &u1, &u2, last_kno);
+		if (rc < 0)
+			goto exit;
+		if (i == nr_kvp)
+			rc = 0;
+		else
+			rc = rcs[i] == EOF? EOF : rcs[i];
+	} else
+		rc = rcs[0];
+
+exit:
+	kvs_free_pairs(pairs);
+	return rc;
+}
+
+static int
 kvs_query_del(struct mio_kvs_id *kid, int start_kno, int nr_kvp, FILE *log)
 {
 	int rc;
@@ -358,6 +407,33 @@ int mio_cmd_kvs_retrieve_pairs(struct mio_kvs_id *kid,
 		start_kno += nr_pairs_op;
 	}
 
+	return rc;
+}
+
+int mio_cmd_kvs_list_pairs(struct mio_kvs_id *kid,
+			   int start_kno, int nr_pairs, FILE *log)
+{
+	int rc = 0;
+	int nr_pairs_op;
+	int last_kno;
+	bool first_round = true;
+
+	last_kno = start_kno;
+	while(nr_pairs > 0) {
+		nr_pairs_op = nr_pairs > KVS_MAX_NR_PAIRS_PER_OP?
+			      KVS_MAX_NR_PAIRS_PER_OP : nr_pairs;
+
+		rc = kvs_query_next(
+			kid, &last_kno, !first_round, nr_pairs_op, log);
+		first_round = false;
+		if (rc < 0)
+			break;
+
+		nr_pairs -= nr_pairs_op;
+	}
+
+	if (rc == EOF)
+		rc = 0;
 	return rc;
 }
 

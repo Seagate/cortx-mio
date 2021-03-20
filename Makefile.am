@@ -111,6 +111,7 @@ noinst_PROGRAMS                   += examples/mio_kvs_create_set
 noinst_PROGRAMS                   += examples/mio_kvs_del_set 
 noinst_PROGRAMS                   += examples/mio_kvs_insert 
 noinst_PROGRAMS                   += examples/mio_kvs_retrieve 
+noinst_PROGRAMS                   += examples/mio_kvs_list 
 noinst_PROGRAMS                   += examples/mio_kvs_del_pairs 
 noinst_PROGRAMS                   += examples/mio_comp_obj_example 
 noinst_PROGRAMS                   += examples/mio_rw_threads 
@@ -154,6 +155,9 @@ examples_mio_kvs_insert_LDADD    = $(top_builddir)/lib/libmio.la
 
 examples_mio_kvs_retrieve_CPPFLAGS = -DMIO_TARGET='mio_kvs_retrieve' $(AM_CPPFLAGS)
 examples_mio_kvs_retrieve_LDADD    = $(top_builddir)/lib/libmio.la
+
+examples_mio_kvs_list_CPPFLAGS = -DMIO_TARGET='mio_kvs_list' $(AM_CPPFLAGS)
+examples_mio_kvs_list_LDADD    = $(top_builddir)/lib/libmio.la
 
 examples_mio_kvs_del_pairs_CPPFLAGS = -DMIO_TARGET='mio_kvs_del_pairs' $(AM_CPPFLAGS)
 examples_mio_kvs_del_pairs_LDADD    = $(top_builddir)/lib/libmio.la
