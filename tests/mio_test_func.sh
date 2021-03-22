@@ -11,8 +11,6 @@ report_and_exit() {
 	local rc=$2
 
 	if [ $rc -eq 0 ]; then
-		## This message is used by Jenkins as a test success criteria;
-		## it must appear on stdout.
 		echo "$name: test status: SUCCESS"
 	else
 		echo "$name: FAILURE $rc" >&2
