@@ -154,7 +154,7 @@ int main(int argc, char **argv)
 
 	if (!strcmp(argv[2], "addb"))
 		type = MIO_TM_ST_ADDB;
-	if (!strcmp(argv[2], "log"))
+	else if (!strcmp(argv[2], "log"))
 		type = MIO_TM_ST_LOG;
 	else {
 		fprintf(stderr,

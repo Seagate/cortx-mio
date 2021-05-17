@@ -266,11 +266,13 @@ int mio_telemetry_init(struct mio_telemetry_conf *conf)
 	if (type == MIO_TM_ST_NONE)
 		mio_telem_rec_ops = NULL;
 	else if (type == MIO_TM_ST_ADDB) {
-		rc = mio_instance_check();
-		if (rc < 0)
-			return rc;
-		if (mio_instance->m_driver_id != MIO_MOTR)
-			return -EINVAL;
+		if (!conf->mtc_is_parser) {
+			rc = mio_instance_check();
+			if (rc < 0)
+				return rc;
+			if (mio_instance->m_driver_id != MIO_MOTR)
+				return -EINVAL;
+		}
 		mio_telem_rec_ops = &mio_motr_addb_rec_ops;
 	} else if (type == MIO_TM_ST_LOG) {
 		if (!conf->mtc_is_parser && mio_log_file == NULL) {
