@@ -209,6 +209,7 @@ static int mio_motr_thread_init(struct mio_thread *thread)
 
 static void mio_motr_thread_fini(struct mio_thread *thread)
 {
+	m0_addb2_force_all();
 	m0_thread_shun();
 	mio_mem_free(thread->mt_drv_thread);
 }
