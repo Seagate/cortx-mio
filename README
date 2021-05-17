@@ -105,10 +105,10 @@ a:12346800	7750c5e4c1549d15bdbc9690587f0c8b	7750c5e4c1549d15bdbc9690587f0c8b
 # Bash shell export format
 export CLIENT_LADDR="172.18.1.22@o2ib:12345:4:8"
 export CLIENT_HA_ADDR="172.18.1.21@o2ib:12345:1:1"
-export CLIENT_PROF_OPT="0x7000000000000001:0x4dc"
+export CLIENT_PROFILE="0x7000000000000001:0x4dc"
 export CLIENT_PROC_FID="0x7200000000000001:0x151"
 >>source ./out.txt 
->>m0composite "$CLIENT_LADDR" "$CLIENT_HA_ADDR" "$CLIENT_PROF_OPT" "$CLIENT_PROC_FID"
+>>m0composite "$CLIENT_LADDR" "$CLIENT_HA_ADDR" "$CLIENT_PROFILE" "$CLIENT_PROC_FID"
 motr[26256]:  7bd0  ERROR  [dix/req.c:794:dix_idxop_meta_update_ast_cb]  All items are failed
 motr[26256]:  5bd0  ERROR  [dix/req.c:794:dix_idxop_meta_update_ast_cb]  All items are failed
 
