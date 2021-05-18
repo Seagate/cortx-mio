@@ -18,8 +18,7 @@
 #include <sys/time.h>
 #include <fcntl.h>
 #include <asm/byteorder.h>
-#include <readline/readline.h>
-#include <readline/history.h>
+#include <editline/readline.h>
 
 #include "obj.h"
 #include "helpers.h"
