@@ -175,10 +175,10 @@ examples_mio_rw_lock_CPPFLAGS = -DMIO_TARGET='mio_rw_lock' $(AM_CPPFLAGS)
 examples_mio_rw_lock_LDADD    = $(top_builddir)/lib/libmio.la -lpthread -lcrypto -lssl
 
 examples_mio_hsm_CPPFLAGS = -DMIO_TARGET='mio_hsm' $(AM_CPPFLAGS)
-examples_mio_hsm_LDADD    = $(top_builddir)/lib/libmio.la -lreadline
+examples_mio_hsm_LDADD    = $(top_builddir)/lib/libmio.la -ledit
 
 examples_mio_io_perf_CPPFLAGS = -DMIO_TARGET='mio_io_perf' $(AM_CPPFLAGS)
-examples_mio_io_perf_LDADD    = $(top_builddir)/lib/libmio.la -lreadline
+examples_mio_io_perf_LDADD    = $(top_builddir)/lib/libmio.la -ledit
 
 include $(top_srcdir)/examples/Makefile.sub
 

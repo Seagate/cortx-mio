@@ -253,11 +253,11 @@ AS_IF([test "x$FOUND_SSL_LIB" = xno], [AC_MSG_ERROR([library 'ssl' is required f
 AC_CHECK_HEADERS([openssl/md5.h], [],
                  AC_MSG_ERROR([md5.h is not found. Try to install openssl-devel package]))
 
-# Check libreadline 
-AC_SEARCH_LIBS([readline], [readline], [],
-                 [readline cannot be found! Try install readline package])
-AC_CHECK_HEADERS([readline/readline.h], [],
-                 AC_MSG_ERROR([readline.h is not found. Try to install readline package]))
+# Check libedit 
+AC_SEARCH_LIBS([edit], [edit], [],
+                 [libedit cannot be found! Try install libedit package])
+AC_CHECK_HEADERS([editline/readline.h], [],
+                 AC_MSG_ERROR([readline.h is not found. Try to install libedit package]))
 
 # Check libmotr
 #AC_SEARCH_LIBS([m0_motr_init], [motr], [],
