@@ -9,10 +9,12 @@
  */
 
 #include <stdlib.h>
+#include <string.h>
+#include <stddef.h> 
 #include <sys/time.h>
 #include <asm/byteorder.h>
 
-#include "mio_internal.h"
+#include "utils.h"
 
 void *mio_mem_alloc(size_t size)
 {

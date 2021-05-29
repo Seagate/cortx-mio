@@ -19,6 +19,7 @@
 #include "motr/client.h"
 
 #include "logger.h"
+#include "utils.h"
 #include "mio_internal.h"
 #include "mio.h"
 

@@ -9,12 +9,11 @@
  */
 
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
-#include "src/mio.h"
 #include "src/mio_telemetry.h"
-#include "obj.h"
-#include "helpers.h"
 
 /**
  * MIO telemetry tests with log as backend. The tests also
@@ -84,7 +83,8 @@ int main(int argc, char **argv)
 	telem_conf.mtc_is_parser = false;
 	rc = mio_telemetry_init(&telem_conf);
 	if (rc < 0) {
-		mio_cmd_error("Initialising MIO failed", rc);
+		fprintf(stderr, "%s: errno = %d, %s\n",
+			"Initialising MIO failed", rc, strerror(-rc));
 		exit(EXIT_FAILURE);
 	}
 

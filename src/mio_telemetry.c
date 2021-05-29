@@ -53,9 +53,15 @@
 #include <stdint.h>
 #include <stdarg.h>
 #include <assert.h>
+
+#include "logger.h"
+#include "utils.h"
+#include "mio_telemetry.h"
+
+#ifdef MIO_MOTR_ADDB
 #include "mio.h"
 #include "mio_internal.h"
-#include "mio_telemetry.h"
+#endif
 
 static struct mio_telemetry_rec_ops *mio_telem_rec_ops = NULL;
 struct mio_telemetry_store mio_telemetry_streams;
@@ -120,7 +126,7 @@ static int telemetry_array_alloc(struct mio_telemetry_array *array,
 		return -EINVAL;
 	
 
-	array->mta_elms = malloc(elm_size * nr_elms);
+	array->mta_elms = mio_mem_alloc(elm_size * nr_elms);
 	if (array->mta_elms == NULL)
 		return -ENOMEM;
 	array->mta_nr_elms = nr_elms;
@@ -132,7 +138,7 @@ static void telemetry_array_free(struct mio_telemetry_array *array)
 	if (array == NULL || array->mta_elms == NULL)
 		return;
 
-	free(array->mta_elms);
+	mio_mem_free(array->mta_elms);
 }
 
 enum {
@@ -175,15 +181,18 @@ int mio_telemetry_array_advertise(char *topic,
 		if (type == MIO_TM_TYPE_ARRAY_UINT64) {
 			ep_u64 = ((uint64_t *)array.mta_elms) + i;
 			e_u64 = va_arg(valist, uint64_t);
-			memcpy((char *)ep_u64, (char *)&e_u64, sizeof(e_u64));
+			mio_mem_copy((char *)ep_u64, (char *)&e_u64,
+				     sizeof(e_u64));
 		} else if (type == MIO_TM_TYPE_ARRAY_UINT32) {
 			ep_u32 = ((uint32_t *)array.mta_elms) + i;
 			e_u32 = va_arg(valist, uint32_t);
-			memcpy((char *)ep_u32, (char *)&e_u32, sizeof(e_u32));
+			mio_mem_copy((char *)ep_u32, (char *)&e_u32,
+				     sizeof(e_u32));
 		} else if (type == MIO_TM_TYPE_ARRAY_UINT16) {
 			ep_u16 = ((uint16_t *)array.mta_elms) + i;
 			e_u16 = va_arg(valist, int);
-			memcpy((char *)ep_u16, (char *)&e_u16, sizeof(e_u16));
+			mio_mem_copy((char *)ep_u16, (char *)&e_u16,
+				     sizeof(e_u16));
 		} else {
 			rc = -EINVAL;
 			break;
@@ -263,9 +272,12 @@ int mio_telemetry_init(struct mio_telemetry_conf *conf)
 	enum mio_telemetry_store_type type = conf->mtc_type;
 	char *mio_log_dir;
 
-	if (type == MIO_TM_ST_NONE)
+	switch (type) {
+	case MIO_TM_ST_NONE:
 		mio_telem_rec_ops = NULL;
-	else if (type == MIO_TM_ST_ADDB) {
+		break;
+#ifdef MIO_MOTR_ADDB
+	case MIO_TM_ST_ADDB:
 		if (!conf->mtc_is_parser) {
 			rc = mio_instance_check();
 			if (rc < 0)
@@ -274,7 +286,9 @@ int mio_telemetry_init(struct mio_telemetry_conf *conf)
 				return -EINVAL;
 		}
 		mio_telem_rec_ops = &mio_motr_addb_rec_ops;
-	} else if (type == MIO_TM_ST_LOG) {
+		break;
+#endif
+	case MIO_TM_ST_LOG:
 		if (!conf->mtc_is_parser && mio_log_file == NULL) {
 			mio_log_dir = (char *)conf->mtc_store_conf;
 			rc = mio_log_init(MIO_TELEMETRY, mio_log_dir);
@@ -282,8 +296,11 @@ int mio_telemetry_init(struct mio_telemetry_conf *conf)
 				return rc;
 		}
 		mio_telem_rec_ops = &mio_telem_log_rec_ops;
-	} else
+		break;
+	default:
 		rc = -EOPNOTSUPP;
+		break;
+	}
 
 	return rc;
 }

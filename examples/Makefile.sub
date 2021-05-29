@@ -27,9 +27,6 @@ examples_mio_rw_lock_SOURCES = examples/mio_rw_lock.c \
 examples_mio_hsm_SOURCES = examples/mio_hsm.c examples/obj.c \
 	  examples/obj_io_poll.c examples/helpers.c
 
-examples_mio_telemetry_test_SOURCES = examples/mio_telemetry_test.c examples/obj.c \
-	  examples/helpers.c
-
 examples_mio_io_perf_SOURCES = examples/mio_io_perf.c \
 	  examples/obj.c examples/obj_io_poll.c examples/obj_io_cbs.c\
 	  examples/helpers.c
@@ -73,4 +70,6 @@ examples_mio_kvs_list_SOURCES = examples/mio_kvs_list.c  examples/kvs.c \
 
 examples_mio_kvs_del_pairs_SOURCES = examples/mio_kvs_del_pairs.c  examples/kvs.c \
 	  examples/helpers.c 
+
+examples_mio_telemetry_test_SOURCES = examples/mio_telemetry_test.c
 
