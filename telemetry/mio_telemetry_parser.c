@@ -12,8 +12,12 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <stdint.h>
+#include <string.h>
+#include <inttypes.h>
 
+#ifdef MIO_MOTR_ADDB
 #include "src/mio.h"
+#endif
 #include "src/mio_telemetry.h"
 
 static void usage()
@@ -152,9 +156,12 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
+#ifdef MIO_MOTR_ADDB
 	if (!strcmp(argv[2], "addb"))
 		type = MIO_TM_ST_ADDB;
-	else if (!strcmp(argv[2], "log"))
+	else
+#endif
+	if (!strcmp(argv[2], "log"))
 		type = MIO_TM_ST_LOG;
 	else {
 		fprintf(stderr,

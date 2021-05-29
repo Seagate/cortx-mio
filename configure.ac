@@ -111,12 +111,12 @@ AS_CASE([$host_os],
 #                            Configuration options                             #
 #------------------------------------------------------------------------------#
 
-# define macros 
+# Define macros 
 AH_TEMPLATE([ENABLE_DEBUG],      [Enable debug info and disable optimizations.])
 AH_TEMPLATE([MOTR_LIB],          [Motr library directory])
 AH_TEMPLATE([MOTR_INCLUDE],      [Directory for Motr development header files])
 
-# enable/disable options
+# Enable/disable options
 AC_ARG_ENABLE([debug],
         [AS_HELP_STRING([--enable-debug],
                         [enable debug information and disable optimizations])],
@@ -124,6 +124,15 @@ AC_ARG_ENABLE([debug],
 )
 AM_CONDITIONAL([ENABLE_DEBUG],
                [test "x$enable_debug" = xyes])
+
+# libtelem_only == yes, build telemetry library only.
+# libtelem_only == no,  build MIO library and standalone telemetry library.
+AC_ARG_ENABLE([libtelem-only],
+        [AS_HELP_STRING([--enable-libtelem-only], [build telemetry library only])],
+        [libtelem_only=yes], [libtelem_only=no]
+)
+AM_CONDITIONAL([BUILD_LIBTELEM_ONLY], [test "x$libtelem_only" = xyes])
+AM_CONDITIONAL([BUILD_LIBMIO], [test "x$libtelem_only" = xno])
 
 # Set directories for default or customized libmotr and Motr headers.
 AC_ARG_WITH([libmotr],
@@ -153,12 +162,12 @@ AC_ARG_WITH([motr-src],
 AC_MSG_NOTICE([LIBMOTR=$LIBMOTR])
 AC_MSG_NOTICE([MOTR_HEADERS=$MOTR_HEADERS])
 
-AS_IF([test -z "$LIBMOTR" || ! test -d "$LIBMOTR/"],
+AS_IF([test "x$libtelem_only" = xno && (test -z "$LIBMOTR" || ! test -d "$LIBMOTR/")],
       [AC_MSG_ERROR([libmotr not found! Please, install Motr package or \
 provide the path to a directory using --with-libmotr option.])]
 )
 
-AS_IF([test -z "$MOTR_HEADERS" || ! test -d "$MOTR_HEADERS/"],
+AS_IF([test "x$libtelem_only" = xno && (test -z "$MOTR_HEADERS" || ! test -d "$MOTR_HEADERS/")],
       [AC_MSG_ERROR([Motr headers not found! Please, install Motr headers or \
 provide the path to a directory using --with-motr-headers option.])]
 )
@@ -178,26 +187,15 @@ AC_PROG_SED
 AC_PROG_LN_S
 
 #------------------------------------------------------------------------------#
-#                        Check required libraries                              #
-#------------------------------------------------------------------------------#
-
-# pthread library is required for a subset of pthread_XXX funcs
-AC_SEARCH_LIBS([pthread_create], [c pthread], [],
-        [pthread_create cannot be found! Try to install libc-devel or libpthread-devel.]
-)
-
-#------------------------------------------------------------------------------#
 #                       Check for required header files                        #
 #------------------------------------------------------------------------------#
 
 AC_CHECK_HEADERS([fcntl.h malloc.h stdint.h stdlib.h string.h sys/time.h unistd.h])
 
-AC_CHECK_HEADERS([pthread.h], [], [AC_MSG_ERROR([pthread.h cannot be found!])])
-
 AC_HEADER_STDBOOL
 
 #------------------------------------------------------------------------------#
-#                       Check required types                                #
+#                       Check required types                                   #
 #------------------------------------------------------------------------------#
 
 AC_TYPE_INT32_T
@@ -212,8 +210,6 @@ AC_TYPE_UINT16_T
 AC_TYPE_UINT32_T
 AC_TYPE_UINT64_T
 AC_TYPE_UINT8_T
-
-AC_CHECK_TYPES([pthread_barrier_t], [], [], [[#include <pthread.h>]])
 
 #------------------------------------------------------------------------------#
 #                      Checking compiler characteristics                       #
@@ -238,32 +234,41 @@ AC_C_INLINE
 
 AC_CHECK_FUNCS([gettimeofday memset strchr strdup strstr strtoull])
 
-# Check libyaml 
-AC_SEARCH_LIBS([yaml_parser_initialize], [yaml], [],
-                 [yaml_parser_initialize cannot be found! Try install yaml package])
-AC_CHECK_HEADERS([yaml.h], [],
-                 AC_MSG_ERROR([yaml.h is not found. Try to install libyaml-devel package]))
+#  Check the following libraries only when building libmio (libtelem_only == no).
+if test "x$libtelem_only" = xno; then
+    # pthread library is required for a subset of pthread_XXX funcs
+    AC_SEARCH_LIBS([pthread_create], [c pthread], [],
+            [pthread_create cannot be found! Try to install libc-devel or libpthread-devel.]
+    )
+    AC_CHECK_HEADERS([pthread.h], [], [AC_MSG_ERROR([pthread.h cannot be found!])])
+    AC_CHECK_TYPES([pthread_barrier_t], [], [], [[#include <pthread.h>]])
 
-# Check for openssl (used by MIO examples)
-AC_CHECK_LIB(crypto, CRYPTO_new_ex_data, [], [AC_MSG_ERROR([library 'crypto' is required for OpenSSL])])
-FOUND_SSL_LIB="no"
-AC_CHECK_LIB(ssl, OPENSSL_init_ssl, [FOUND_SSL_LIB="yes"])
-AC_CHECK_LIB(ssl, SSL_library_init, [FOUND_SSL_LIB="yes"])
-AS_IF([test "x$FOUND_SSL_LIB" = xno], [AC_MSG_ERROR([library 'ssl' is required for OpenSSL])])
-AC_CHECK_HEADERS([openssl/md5.h], [],
-                 AC_MSG_ERROR([md5.h is not found. Try to install openssl-devel package]))
+    # Check libyaml 
+    AC_SEARCH_LIBS([yaml_parser_initialize], [yaml], [],
+                     [yaml_parser_initialize cannot be found! Try install yaml package])
+    AC_CHECK_HEADERS([yaml.h], [],
+                     AC_MSG_ERROR([yaml.h is not found. Try to install libyaml-devel package]))
+    # Check for openssl (used by MIO examples)
+    AC_CHECK_LIB(crypto, CRYPTO_new_ex_data, [], [AC_MSG_ERROR([library 'crypto' is required for OpenSSL])])
+    FOUND_SSL_LIB="no"
+    AC_CHECK_LIB(ssl, OPENSSL_init_ssl, [FOUND_SSL_LIB="yes"])
+    AC_CHECK_LIB(ssl, SSL_library_init, [FOUND_SSL_LIB="yes"])
+    AS_IF([test "x$FOUND_SSL_LIB" = xno], [AC_MSG_ERROR([library 'ssl' is required for OpenSSL])])
+    AC_CHECK_HEADERS([openssl/md5.h], [],
+                     AC_MSG_ERROR([md5.h is not found. Try to install openssl-devel package]))
 
-# Check libedit 
-AC_SEARCH_LIBS([edit], [edit], [],
-                 [libedit cannot be found! Try install libedit package])
-AC_CHECK_HEADERS([editline/readline.h], [],
-                 AC_MSG_ERROR([readline.h is not found. Try to install libedit package]))
+    # Check libedit 
+    AC_SEARCH_LIBS([edit], [edit], [],
+                     [libedit cannot be found! Try install libedit package])
+    AC_CHECK_HEADERS([editline/readline.h], [],
+                     AC_MSG_ERROR([readline.h is not found. Try to install libedit package]))
 
-# Check libmotr
-#AC_SEARCH_LIBS([m0_motr_init], [motr], [],
-#                 [m0_motr_init cannot be found! Try install libmotr package])
-#AC_CHECK_HEADERS([motr/client.h], [],
-#                 AC_MSG_ERROR([client.h is not found. Try to install libmotr package]))
+    # Check libmotr
+    #AC_SEARCH_LIBS([m0_motr_init], [motr], [],
+    #                 [m0_motr_init cannot be found! Try install libmotr package])
+    #AC_CHECK_HEADERS([motr/client.h], [],
+    #                 AC_MSG_ERROR([client.h is not found. Try to install libmotr package]))
+fi
 
 #------------------------------------------------------------------------------#
 #                      Handle configuration options                            #
@@ -282,23 +287,16 @@ AS_IF([test x$enable_debug = xyes],
 #------------------------------------------------------------------------------#
 #                             Set up build variables                           #
 #------------------------------------------------------------------------------#
-MIO_CPPFLAGS="-D_REENTRANT -D_GNU_SOURCE -DM0_INTERNAL='' -DM0_EXTERN=extern \
-             -iquote'$ABS_BUILDDIR' -iquote'$ABS_SRCDIR' -include'config.h' \
-             -I$MOTR_HEADERS -I$GALOIS_HEADERS $MIO_CPPFLAGS"
-
+if test "x$libtelem_only" = xyes; then
+    MIO_CPPFLAGS="-D_REENTRANT -D_GNU_SOURCE -iquote'$ABS_BUILDDIR' -iquote'$ABS_SRCDIR' "
+else # Build MIO with IO, Motr and telemetry
+    MIO_CPPFLAGS="-D_REENTRANT -D_GNU_SOURCE -DM0_INTERNAL='' -DM0_EXTERN=extern \
+                 -iquote'$ABS_BUILDDIR' -iquote'$ABS_SRCDIR' -include'config.h' \
+                 -I$MOTR_HEADERS -I$GALOIS_HEADERS $MIO_CPPFLAGS"
+fi
 MIO_CPPFLAGS_DIST=$(echo "$MIO_CPPFLAGS" | grep -Po -e '-D\S+|-I/usr\S+' | xargs echo)
-
-# -Wno-attributes is required to suppress warnings about unrecognized
-# __attribute__, such as __attribute__((gccxml(...))). It's important because we
-# use -Werror, which turns warnings into errors, but we still need to be able to
-# use gccxml attributes.
 MIO_CFLAGS="-pipe -Wall -Werror -Wno-attributes -fno-strict-aliasing $MIO_CFLAGS"
-
-# Prevents gcc from introducing common symbols in object files. These symbols
-# are avoided because they break the compilation toolchain that Parallel
-# Scientific is using.
 MIO_CFLAGS="-fno-common $MIO_CFLAGS"
-
 MIO_LDFLAGS="-rdynamic -L$LIBMOTR $MIO_LDFLAGS"
 
 # trim spaces at the end of flags

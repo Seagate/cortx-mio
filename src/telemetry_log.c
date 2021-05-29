@@ -9,14 +9,17 @@
  */
 
 #include <stdio.h>
-#include <errno.h>
+#include <stdlib.h>
 #include <stdint.h>
+#include <errno.h>
 #include <string.h>
+#include <inttypes.h>
+#include <ctype.h>
 #include <assert.h>
 
 #include "logger.h"
 #include "utils.h"
-#include "mio_internal.h"
+//#include "mio_internal.h"
 #include "mio_telemetry.h"
 
 /**

@@ -12,11 +12,13 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>	
+#include <stdbool.h>
+#include <inttypes.h>
+#include <limits.h>
 #include <assert.h>
 
 #include "logger.h"
 #include "utils.h"
-#include "mio_internal.h"
 
 struct mio_log_level_name mio_log_levels[] = {
         [MIO_ERROR]	= {"error"},
