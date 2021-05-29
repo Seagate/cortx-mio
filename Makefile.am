@@ -63,37 +63,43 @@ EXTRA_DIST = autogen.sh
 CLEANFILES =
 
 #-------------------------------------------------------------------------------
-#                                  MIO Libraries                               #
+#                                  MIO Library                                 #
 #-------------------------------------------------------------------------------
 
-lib_LTLIBRARIES          += lib/libmio.la
-lib_libmio_la_CPPFLAGS  = -DM0_TARGET='libmotr' $(AM_CPPFLAGS)
-lib_libmio_la_LDFLAGS   = -version-info @LT_VERSION@ $(AM_LDFLAGS)
+lib_LTLIBRARIES         += lib/libmio.la
+lib_libmio_la_CPPFLAGS   = -DM0_TARGET='libmotr' -DMIO_MOTR_ADDB $(AM_CPPFLAGS)
+lib_libmio_la_LDFLAGS    = -version-info @LT_VERSION@ $(AM_LDFLAGS)
 #lib_libmio_la_LIBADD    = @MOTR_LIBS@ @YAML_LIBS@ 
-lib_libmio_la_LIBADD    = -lmotr -lyaml 
-
-lib_libmio_la_SOURCES =
+lib_libmio_la_LIBADD     = -lmotr -lyaml 
+lib_libmio_la_SOURCES    =
 
 # install directory for public libmio headers
 mio_includedir             = $(includedir)/mio
-
 nobase_mio_include_HEADERS = config.h
 
-include $(top_srcdir)/src/Makefile.sub
+#-------------------------------------------------------------------------------
+#                     MIO Telemetry Library (No IO, MOTR and ADDB)             #
+#-------------------------------------------------------------------------------
 
+lib_LTLIBRARIES          += lib/libtelem.la
+lib_libtelem_la_CPPFLAGS  = $(AM_CPPFLAGS)
+lib_libtelem_la_LDFLAGS   = -version-info @LT_VERSION@ $(AM_LDFLAGS)
+lib_libtelem_la_LIBADD    = 
+lib_libtelem_la_SOURCES   =
+
+# install directory for public libtelem headers
+telem_includedir             = $(includedir)/telem
+nobase_telem_include_HEADERS =
+
+#-------------------------------------------------------------------------------
+#                        Sources for Libraries                                 #
+#-------------------------------------------------------------------------------
+include $(top_srcdir)/src/Makefile.sub
 
 #-------------------------------------------------------------------------------
 #                                 Tests                                        #
 #-------------------------------------------------------------------------------
 include $(top_srcdir)/tests/Makefile.sub
-
-#-------------------------------------------------------------------------------
-#                                 Telemetry                                    #
-#-------------------------------------------------------------------------------
-noinst_PROGRAMS                   += telemetry/mio_telemetry_parser
-telemetry_mio_telemetry_parser_CPPFLAGS = -DMIO_TARGET='mio_telemetry_parser' $(AM_CPPFLAGS)
-telemetry_mio_telemetry_parser_LDADD    = $(top_builddir)/lib/libmio.la
-include $(top_srcdir)/telemetry/Makefile.sub
 
 #-------------------------------------------------------------------------------
 #                                 MIO Examples                                 #
@@ -117,7 +123,6 @@ noinst_PROGRAMS                   += examples/mio_comp_obj_example
 noinst_PROGRAMS                   += examples/mio_rw_threads 
 noinst_PROGRAMS                   += examples/mio_rw_lock 
 noinst_PROGRAMS                   += examples/mio_hsm 
-noinst_PROGRAMS                   += examples/mio_telemetry_test 
 noinst_PROGRAMS                   += examples/mio_io_perf
 
 examples_mio_cat_CPPFLAGS = -DMIO_TARGET='mio_cat' $(AM_CPPFLAGS)
@@ -165,9 +170,6 @@ examples_mio_kvs_del_pairs_LDADD    = $(top_builddir)/lib/libmio.la
 examples_mio_comp_obj_example_CPPFLAGS = -DMIO_TARGET='mio_comp_obj_example' $(AM_CPPFLAGS)
 examples_mio_comp_obj_example_LDADD    = $(top_builddir)/lib/libmio.la
 
-examples_mio_telemetry_test_CPPFLAGS = -DMIO_TARGET='mio_telemetry_test' $(AM_CPPFLAGS)
-examples_mio_telemetry_test_LDADD    = $(top_builddir)/lib/libmio.la
-
 examples_mio_rw_threads_CPPFLAGS = -DMIO_TARGET='mio_rw_threads' $(AM_CPPFLAGS)
 examples_mio_rw_threads_LDADD    = $(top_builddir)/lib/libmio.la -lpthread -lcrypto -lssl
 
@@ -181,6 +183,19 @@ examples_mio_io_perf_CPPFLAGS = -DMIO_TARGET='mio_io_perf' $(AM_CPPFLAGS)
 examples_mio_io_perf_LDADD    = $(top_builddir)/lib/libmio.la -ledit
 
 include $(top_srcdir)/examples/Makefile.sub
+
+#-------------------------------------------------------------------------------
+#                  Telemetry Examples and Sample Workflow                      #
+#-------------------------------------------------------------------------------
+noinst_PROGRAMS                   += examples/mio_telemetry_test 
+examples_mio_telemetry_test_CPPFLAGS = -DMIO_TARGET='mio_telemetry_test' $(AM_CPPFLAGS)
+examples_mio_telemetry_test_LDADD    = $(top_builddir)/lib/libtelem.la
+
+
+noinst_PROGRAMS                   += telemetry/mio_telemetry_parser
+telemetry_mio_telemetry_parser_CPPFLAGS = -DMIO_TARGET='mio_telemetry_parser' $(AM_CPPFLAGS)
+telemetry_mio_telemetry_parser_LDADD    = $(top_builddir)/lib/libmio.la
+include $(top_srcdir)/telemetry/Makefile.sub
 
 #-------------------------------------------------------------------------------
 #                                 Build rules                                  # 

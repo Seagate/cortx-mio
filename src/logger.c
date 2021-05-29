@@ -15,6 +15,7 @@
 #include <assert.h>
 
 #include "logger.h"
+#include "utils.h"
 #include "mio_internal.h"
 
 struct mio_log_level_name mio_log_levels[] = {

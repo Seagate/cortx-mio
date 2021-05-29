@@ -11,6 +11,7 @@
 #include <assert.h>
 #include <sys/errno.h>
 
+#include "utils.h"
 #include "mio_internal.h"
 #include "mio.h"
 #include "driver_motr.h"

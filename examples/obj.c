@@ -27,8 +27,8 @@ int obj_alloc_iovecs(struct mio_iovec **data, uint64_t bcount,
 	struct mio_iovec *iovecs;
 	char *base;
 
-	iovecs = mio_mem_alloc(bcount * sizeof(*iovecs));
-	base = mio_mem_alloc(bcount * bsize);
+	iovecs = malloc(bcount * sizeof(*iovecs));
+	base = malloc(bcount * bsize);
 	if (iovecs == NULL || base == NULL) {
 		fprintf(stderr, "Can't allocate memory!\n");
 		rc = -ENOMEM;
@@ -47,15 +47,15 @@ int obj_alloc_iovecs(struct mio_iovec **data, uint64_t bcount,
 	return 0;
 
 error_exit:
-	mio_mem_free(base);
-	mio_mem_free(iovecs);
+	free(base);
+	free(iovecs);
 	return rc;
 }
 
 void obj_cleanup_iovecs(struct mio_iovec *data)
 {
-	mio_mem_free(data[0].miov_base);
-	mio_mem_free(data);
+	free(data[0].miov_base);
+	free(data);
 }
 
 int obj_read_data_from_file(FILE *fp, uint64_t bcount, uint64_t bsize,

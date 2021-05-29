@@ -17,6 +17,7 @@
 #include <uuid/uuid.h>
 
 #include "logger.h"
+#include "utils.h"
 #include "mio.h"
 #include "mio_internal.h"
 #include "driver_motr.h"

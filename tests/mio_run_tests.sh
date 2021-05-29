@@ -45,7 +45,6 @@ mio_all_tests="mio_obj_tests \
 	      mio_comp_obj_tests \
 	      mio_kvs_tests \
 	      mio_pool_tests \
-	      mio_pool_tests \
 	      mio_obj_hint_tests"
 
 mio_run_test()

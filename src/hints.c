@@ -12,6 +12,7 @@
 #include <assert.h>
 
 #include "logger.h"
+#include "utils.h"
 #include "mio.h"
 #include "mio_internal.h"
 

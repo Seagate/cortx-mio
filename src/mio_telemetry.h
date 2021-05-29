@@ -14,6 +14,7 @@
 #define __MIO_TELEMETRY_H__
 
 #include <stdio.h>
+#include <stdbool.h>
 
 /**
  * Telemetry interface provides MIO and its upper applications (by applications,

@@ -15,6 +15,7 @@
 #include <assert.h>
 #include <addb2/addb2_internal.h>
 
+#include "utils.h"
 #include "mio_internal.h"
 #include "mio_telemetry.h"
 
