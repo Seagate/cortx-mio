@@ -75,7 +75,7 @@ void mio_op_fini(struct mio_op *op)
 	if (op->mop_op_ops->mopo_fini)
 		op->mop_op_ops->mopo_fini(op);
 
-	mio_telemetry_advertise(
+	mio_telemetry_advertise_noprefix(
 		"mio-op-fini", MIO_TM_TYPE_UINT64, &op->mop_seqno);
 }
 
@@ -205,7 +205,7 @@ int mio_obj_op_init(struct mio_op *op, struct mio_obj *obj,
 	pthread_mutex_unlock(&mio_op_seqno_lock);
 
 	if (obj != NULL)
-		mio_telemetry_array_advertise(
+		mio_telemetry_array_advertise_noprefix(
 			"mio-obj-op-init", MIO_TM_TYPE_ARRAY_UINT64,
 			3, obj->mo_sess_seqno, op->mop_seqno, opcode);
 	return 0;
@@ -236,7 +236,7 @@ static int obj_init(struct mio_obj *obj, const struct mio_obj_id *oid)
 	obj->mo_sess_seqno = mio_obj_session_seqno++;
 	pthread_mutex_unlock(&mio_obj_session_seqno_lock);
 
-	mio_telemetry_advertise(
+	mio_telemetry_advertise_noprefix(
 		"mio-obj-open", MIO_TM_TYPE_UINT64, &obj->mo_sess_seqno);
 	return 0;
 }
@@ -261,7 +261,7 @@ void mio_obj_close(struct mio_obj *obj)
 	if (obj->mo_drv_obj_ops->moo_close != NULL)
 		obj->mo_drv_obj_ops->moo_close(obj);
 
-	mio_telemetry_advertise(
+	mio_telemetry_advertise_noprefix(
 		"mio-obj-close", MIO_TM_TYPE_UINT64, &obj->mo_sess_seqno);
 }
 
@@ -923,6 +923,7 @@ int mio_init(const char *yaml_conf)
 
 	mio_memset(&telem_conf, 0, sizeof telem_conf);
 	telem_conf.mtc_type = mio_instance->m_telem_store_type;
+	telem_conf.mtc_prefix = mio_instance->m_telem_prefix;
 	if (telem_conf.mtc_type == MIO_TM_ST_LOG)
 		telem_conf.mtc_store_conf = mio_instance->m_log_dir;
 	rc = mio_telemetry_init(&telem_conf);

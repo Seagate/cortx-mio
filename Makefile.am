@@ -196,10 +196,17 @@ examples_mio_telemetry_test_LDADD    = $(top_builddir)/lib/libtelem.la
 
 include $(top_srcdir)/examples/Makefile.sub
 
+#-------------------------------------------------------------------------------
+#                           Telemetry Sample Parser                            #
+#-------------------------------------------------------------------------------
 noinst_PROGRAMS                   += telemetry/mio_telemetry_parser
+if BUILD_LIBMIO
+telemetry_mio_telemetry_parser_CPPFLAGS = -DMIO_TARGET='mio_telemetry_parser' -DMIO_MOTR_ADDB $(AM_CPPFLAGS)
+telemetry_mio_telemetry_parser_LDADD    = $(top_builddir)/lib/libmio.la
+else
 telemetry_mio_telemetry_parser_CPPFLAGS = -DMIO_TARGET='mio_telemetry_parser' $(AM_CPPFLAGS)
 telemetry_mio_telemetry_parser_LDADD    = $(top_builddir)/lib/libtelem.la
-#telemetry_mio_telemetry_parser_LDADD    = $(top_builddir)/lib/libmio.la
+endif
 include $(top_srcdir)/telemetry/Makefile.sub
 
 # vim: textwidth=80 nowrap foldmethod=marker

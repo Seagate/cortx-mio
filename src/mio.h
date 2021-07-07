@@ -820,6 +820,7 @@ mio_composite_obj_get_extents(struct mio_obj *obj,
  */
 struct mio {
 	enum mio_telemetry_store_type m_telem_store_type;
+	char *m_telem_prefix;
 	
 	enum mio_log_level m_log_level;
 	char *m_log_dir;

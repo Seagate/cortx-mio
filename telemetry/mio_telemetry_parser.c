@@ -86,7 +86,11 @@ int print_telemetry_rec(struct mio_telemetry_rec *rec)
 	if (buf == NULL)
 		return -ENOMEM;
 
-	sprintf(buf, "%s %s", rec->mtr_time_str, rec->mtr_topic);
+	if (rec->mtr_prefix != NULL)
+		sprintf(buf, "%s %s %s",
+			rec->mtr_time_str, rec->mtr_prefix, rec->mtr_topic);
+	else
+		sprintf(buf, "%s %s", rec->mtr_time_str, rec->mtr_topic);
 
 	switch (rec->mtr_type) {
 	case MIO_TM_TYPE_UINT16:
