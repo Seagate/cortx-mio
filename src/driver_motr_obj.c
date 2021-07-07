@@ -1095,7 +1095,7 @@ static int motr_obj_rw_one_op(struct mio_obj *obj,
 	if (rc < 0)
 		goto error;
 
-	mio_telemetry_array_advertise(
+	mio_telemetry_array_advertise_noprefix(
 		"mio-op-to-motr-io", MIO_TM_TYPE_ARRAY_UINT64,
 		3, obj->mo_sess_seqno, op->mop_seqno, cops[0]->op_sm.sm_id);
 	m0_op_launch(cops, ARRAY_SIZE(cops));
@@ -1631,7 +1631,7 @@ static int motr_obj_attrs_query(int opcode, struct mio_obj *obj,
 	if (rc < 0)
 		goto error;
 
-	mio_telemetry_array_advertise(
+	mio_telemetry_array_advertise_noprefix(
 		"mio-op-to-motr-kv", MIO_TM_TYPE_ARRAY_UINT64,
 		3, obj->mo_sess_seqno, op->mop_seqno, cops[0]->op_sm.sm_id);
 	m0_op_launch(cops, 1);

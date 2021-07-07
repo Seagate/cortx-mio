@@ -74,7 +74,7 @@ struct mio_telemetry_store {
 	void *mts_parse_stream;
 };
 
-extern struct mio_telemetry_store mio_telemetry_streams;
+extern struct mio_telemetry_store mio_telem_streams;
 
 /**
  * Timespan and timepoint are defined as uint64_t.
@@ -104,6 +104,7 @@ struct mio_telemetry_array {
 
 struct mio_telemetry_rec {
 	char *mtr_time_str; /* Time in string. */
+	char *mtr_prefix;
 	const char *mtr_topic;
 	enum mio_telemetry_type mtr_type;
 	void *mtr_value;
@@ -128,6 +129,7 @@ struct mio_telemetry_conf {
 	bool mtc_is_parser;
 	void *mtc_store_conf;
 };
+extern struct mio_telemetry_conf mio_telem_conf;
 
 extern struct mio_telemetry_rec_ops mio_motr_addb_rec_ops;
 extern struct mio_telemetry_rec_ops mio_telem_log_rec_ops;
@@ -167,9 +169,9 @@ extern struct mio_telemetry_rec_ops mio_telem_log_rec_ops;
  * @return = 0 for success, anything else for an error.
  */
 int mio_telemetry_advertise(const char *topic,
-			   enum mio_telemetry_type type,
-			   void *value);
-int mio_telemetry_array_advertise(char *topic,
+			    enum mio_telemetry_type type,
+			    void *value);
+int mio_telemetry_array_advertise(const char *topic,
 				  enum mio_telemetry_type type,
 				  int nr_elms, ...);
 int mio_telemetry_parse(struct mio_telemetry_store *sp,
@@ -178,7 +180,15 @@ int mio_telemetry_parse(struct mio_telemetry_store *sp,
 int mio_telemetry_init(struct mio_telemetry_conf *conf);
 void mio_telemetry_fini();
 
-/* Helper functions. */
+/** Some internal APIs :). */
+int mio_telemetry_advertise_noprefix(const char *topic,
+				     enum mio_telemetry_type type,
+				     void *value);
+int mio_telemetry_array_advertise_noprefix(const char *topic,
+					   enum mio_telemetry_type type,
+					   int nr_elms, ...);
+
+/** Helper functions. */
 int mio_telemetry_alloc_value(enum mio_telemetry_type type, void **value);
 
 #endif

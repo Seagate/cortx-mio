@@ -70,6 +70,9 @@ void telem_tests()
 		mio_telemetry_advertise(topic, type, &array);
 	}
 
+	mio_telemetry_array_advertise(topic, type,
+				      3, elms_u64[0], elms_u64[1], elms_u64[2]);
+
 	free(topic);
 }
 
@@ -79,6 +82,7 @@ int main(int argc, char **argv)
 	struct mio_telemetry_conf telem_conf;
 
 	memset(&telem_conf, 0, sizeof telem_conf);
+	telem_conf.mtc_prefix = "mio_telemetry_test";
 	telem_conf.mtc_type = MIO_TM_ST_LOG;
 	telem_conf.mtc_is_parser = false;
 	rc = mio_telemetry_init(&telem_conf);

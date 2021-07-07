@@ -42,6 +42,7 @@ enum conf_key {
 	MIO_LOG_DIR,
 	MIO_DRIVER,
 	MIO_TELEMETRY_STORE,
+	MIO_TELEMETRY_PREFIX,
 
 	/* Motr driver. "MOTR_CONFIG" is the key for Motr section. */
 	MOTR_CONFIG,
@@ -100,6 +101,10 @@ struct conf_entry conf_table[] = {
 	},
 	[MIO_TELEMETRY_STORE] = {
 		.name = "MIO_TELEMETRY_STORE",
+		.type = MIO
+	},
+	[MIO_TELEMETRY_PREFIX] = {
+		.name = "MIO_TELEMETRY_PREFIX",
 		.type = MIO
 	},
 
@@ -441,6 +446,10 @@ static int conf_extract_value(enum conf_key key, char *value)
 		mio_inst_telem_store_type = conf_get_telem_store_type(value);
 		if (mio_inst_telem_store_type == MIO_TM_ST_INVALID)
 			rc = -EINVAL;
+		break;
+	case MIO_TELEMETRY_PREFIX:
+		assert(mio_instance != NULL && value != NULL);
+		rc = conf_copy_str(&mio_instance->m_telem_prefix, value);
 		break;
 	case MIO_LOG_LEVEL:
 		assert(mio_instance != NULL);

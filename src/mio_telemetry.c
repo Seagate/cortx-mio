@@ -52,6 +52,7 @@
 #include <errno.h>
 #include <stdint.h>
 #include <stdarg.h>
+#include <string.h>
 #include <assert.h>
 
 #include "logger.h"
@@ -64,7 +65,8 @@
 #endif
 
 static struct mio_telemetry_rec_ops *mio_telem_rec_ops = NULL;
-struct mio_telemetry_store mio_telemetry_streams;
+struct mio_telemetry_store mio_telem_streams;
+struct mio_telemetry_conf mio_telem_conf;
 
 int mio_telemetry_alloc_value(enum mio_telemetry_type type, void **value)
 {
@@ -145,13 +147,57 @@ enum {
 	MIO_TM_ARRAY_MAX_NR_ELMS = 32 
 };
 
-int mio_telemetry_array_advertise(char *topic,
+static int telemetry_do_advertise(bool prefix, const char *topic,
 				  enum mio_telemetry_type type,
-				  int nr_elms, ...)
+				  void *value)
+{
+	int rc;
+	int len;
+	char *buf;
+	struct mio_telemetry_rec rec;
+
+	/* If telemetry store is NOT selected, do nothing and simply return. */
+	if (mio_telem_rec_ops == NULL)
+		return 0;
+
+	if (mio_telem_rec_ops->mtro_encode == NULL ||
+	    mio_telem_rec_ops->mtro_store == NULL)
+		return -EOPNOTSUPP;
+
+	rec.mtr_prefix = prefix == true? mio_telem_conf.mtc_prefix : NULL;
+	rec.mtr_topic = topic;
+	rec.mtr_type = type;
+	rec.mtr_value = value;
+	rc = mio_telem_rec_ops->mtro_encode(&rec, &buf, &len);
+	if (rc < 0)
+		return rc;
+
+	rc = mio_telem_rec_ops->mtro_store(
+		mio_telem_streams.mts_dump_stream, buf, len);
+	mio_mem_free(buf);
+	return rc;
+}
+
+int mio_telemetry_advertise(const char *topic,
+			    enum mio_telemetry_type type,
+			    void *value)
+{
+	return telemetry_do_advertise(true, topic, type, value);
+}
+
+int mio_telemetry_advertise_noprefix(const char *topic,
+				     enum mio_telemetry_type type,
+				     void *value)
+{
+	return telemetry_do_advertise(false, topic, type, value);
+}
+
+static int telemetry_do_array_advertise(bool prefix, const char *topic,
+					enum mio_telemetry_type type,
+					int nr_elms, va_list valist)
 {
 	int i;
 	int rc = 0;
-	va_list valist;
 	uint64_t e_u64;
 	uint32_t e_u32;
 	uint16_t e_u16;
@@ -175,8 +221,6 @@ int mio_telemetry_array_advertise(char *topic,
 		return rc;
 
 	/* Generate telemetry record with array value. */
-	va_start(valist, nr_elms);
-
 	for (i = 0; i < nr_elms; i++) {
 		if (type == MIO_TM_TYPE_ARRAY_UINT64) {
 			ep_u64 = ((uint64_t *)array.mta_elms) + i;
@@ -200,41 +244,36 @@ int mio_telemetry_array_advertise(char *topic,
 	}
 	if (rc < 0)
 		goto exit;
-	mio_telemetry_advertise(topic, type, &array);
+	telemetry_do_advertise(prefix, topic, type, &array);
 
 exit:
-	va_end(valist);
 	telemetry_array_free(&array);
 	return rc;
 }
 
-int mio_telemetry_advertise(const char *topic,
-			    enum mio_telemetry_type type,
-			    void *value)
+int mio_telemetry_array_advertise(const char *topic,
+				  enum mio_telemetry_type type,
+				  int nr_elms, ...)
 {
 	int rc;
-	int len;
-	char *buf;
-	struct mio_telemetry_rec rec;
+	va_list valist;
 
-	/* If telemetry store is NOT selected, do nothing and simply return. */
-	if (mio_telem_rec_ops == NULL)
-		return 0;
+	va_start(valist, nr_elms);	
+	rc = telemetry_do_array_advertise(true, topic, type, nr_elms, valist);
+	va_end(valist);
+	return rc;
+}
 
-	if (mio_telem_rec_ops->mtro_encode == NULL ||
-	    mio_telem_rec_ops->mtro_store == NULL)
-		return -EOPNOTSUPP;
+int mio_telemetry_array_advertise_noprefix(const char *topic,
+					   enum mio_telemetry_type type,
+					   int nr_elms, ...)
+{
+	int rc;
+	va_list valist;
 
-	rec.mtr_topic = topic;
-	rec.mtr_type = type;
-	rec.mtr_value = value;
-	rc = mio_telem_rec_ops->mtro_encode(&rec, &buf, &len);
-	if (rc < 0)
-		return rc;
-
-	rc = mio_telem_rec_ops->mtro_store(
-		mio_telemetry_streams.mts_dump_stream, buf, len);
-	mio_mem_free(buf);
+	va_start(valist, nr_elms);	
+	rc = telemetry_do_array_advertise(false, topic, type, nr_elms, valist);
+	va_end(valist);
 	return rc;
 }
 
@@ -266,11 +305,69 @@ int mio_telemetry_parse(struct mio_telemetry_store *sp,
 	return rc;
 }
 
+static void telemetry_conf_free()
+{
+	mio_mem_free(mio_telem_conf.mtc_prefix);
+	mio_mem_free(mio_telem_conf.mtc_store_conf);
+}
+
+static int telemetry_conf_save(struct mio_telemetry_conf *conf)
+{
+	int rc = 0;
+	int len = 0;
+	enum mio_telemetry_store_type type = conf->mtc_type;
+	char *mio_log_dir;
+
+	mio_memset(&mio_telem_conf, 0, sizeof(mio_telem_conf));
+
+	/* Save prefix. */
+	if (conf->mtc_prefix != NULL) {
+		len = strlen(conf->mtc_prefix) + 1;
+		mio_telem_conf.mtc_prefix = mio_mem_alloc(len);
+		if (mio_telem_conf.mtc_prefix == NULL)
+			return -ENOMEM;
+		mio_mem_copy(mio_telem_conf.mtc_prefix, conf->mtc_prefix, len);
+	}
+
+	/* Save store specific configurations. */
+	switch (type) {
+	case MIO_TM_ST_NONE:
+		break;
+#ifdef MIO_MOTR_ADDB
+	case MIO_TM_ST_ADDB:
+		break;
+#endif
+	case MIO_TM_ST_LOG:
+		mio_log_dir = (char *)conf->mtc_store_conf;
+		if (mio_log_dir != NULL) {
+			len = strlen(mio_log_dir) + 1;
+			mio_telem_conf.mtc_store_conf = mio_mem_alloc(len);
+			if (mio_telem_conf.mtc_store_conf == NULL)
+				rc = -ENOMEM;
+			else
+				mio_mem_copy(mio_telem_conf.mtc_store_conf,
+					     mio_log_dir, len);
+		}
+		break;
+	default:
+		rc = -EOPNOTSUPP;
+		break;
+	}
+
+	if (rc != 0)
+		telemetry_conf_free();
+	return rc;
+}
+
 int mio_telemetry_init(struct mio_telemetry_conf *conf)
 {
 	int rc = 0;
 	enum mio_telemetry_store_type type = conf->mtc_type;
 	char *mio_log_dir;
+
+	rc = telemetry_conf_save(conf);
+	if (rc < 0)
+		return rc;
 
 	switch (type) {
 	case MIO_TM_ST_NONE:
@@ -302,11 +399,13 @@ int mio_telemetry_init(struct mio_telemetry_conf *conf)
 		break;
 	}
 
+
 	return rc;
 }
 
 void mio_telemetry_fini()
 {
+	telemetry_conf_free();
 	mio_telem_rec_ops = NULL;
 	return;
 }

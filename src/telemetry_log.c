@@ -36,6 +36,11 @@
  *     in which DATA_TYPE is the text string representing data type. 
  */
 
+enum {
+	TELEM_LOG_NO_PREFIX_SIGN = 0,
+	TELEM_LOG_PREFIX_SIGN = 1,
+};
+
 char *telem_data_type_names[] = {
 	[MIO_TM_TYPE_UINT16] = "UINT16",
 	[MIO_TM_TYPE_UINT32] = "UINT32",
@@ -360,7 +365,9 @@ mio_telem_log_encode(const struct mio_telemetry_rec *rec, char **buf, int *len)
 	enum mio_telemetry_type type;
 	void *value;
 	char *rec_buf;
+	char *prefix;
 
+	prefix = rec->mtr_prefix;
 	topic = rec->mtr_topic;
 	type = rec->mtr_type;
 	value = rec->mtr_value;
@@ -371,6 +378,13 @@ mio_telem_log_encode(const struct mio_telemetry_rec *rec, char **buf, int *len)
 	if (rec_buf == NULL)
 		return -ENOMEM;
 	cursor = rec_buf;
+
+	/* Prefix. */
+	if (prefix != NULL) {
+		telem_log_rec_add_u16(&cursor, TELEM_LOG_PREFIX_SIGN);
+		telem_log_rec_add_string(&cursor, prefix);
+	} else
+		telem_log_rec_add_u16(&cursor, TELEM_LOG_NO_PREFIX_SIGN);
 
 	/* Topic. */
 	telem_log_rec_add_string(&cursor, topic);
@@ -399,8 +413,10 @@ static int mio_telem_log_decode(const char *buf, const char *head,
 				const char *tail, struct mio_telemetry_rec *rec)
 {
 	int rc = 0;
-	char *cursor;	
+	char *cursor;
+	char *prefix = NULL;
 	char *topic = NULL;
+	uint16_t has_prefix;
 	enum mio_telemetry_type type = MIO_TM_TYPE_INVALID;
 	void *value = NULL;
 
@@ -413,8 +429,13 @@ static int mio_telem_log_decode(const char *buf, const char *head,
 		return -ENOMEM;
 	mio_mem_copy(rec->mtr_time_str, (char *)head, strlen(head) + 1);
 
-	/* Topic. */
+	/* Prefix. */
 	cursor = (char *)buf;
+	telem_log_rec_get_u16(&cursor, &has_prefix);
+	if (has_prefix == TELEM_LOG_PREFIX_SIGN)
+		telem_log_rec_get_string(&cursor, &prefix);
+
+	/* Topic. */
 	telem_log_rec_get_string(&cursor, &topic);
 
 	/* Type. */
@@ -428,6 +449,7 @@ static int mio_telem_log_decode(const char *buf, const char *head,
 		return rc;
 	}
 
+	rec->mtr_prefix = prefix;
 	rec->mtr_topic = topic;
 	rec->mtr_type = type;
 	rec->mtr_value = value;

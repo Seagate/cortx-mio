@@ -62,7 +62,12 @@
  * (3) Decode records.
  */
 
-uint16_t mio_motr_addb_magic = 0x202e;
+uint16_t motr_addb_magic = 0x202e;
+
+enum {
+	MOTR_ADDB_NO_PREFIX_SIGN = 0,
+	MOTR_ADDB_PREFIX_SIGN = 1,
+};
 
 enum {
 	MIO_MOTR_ADDB_ID = M0_ADDB2__EXT_RANGE_3,
@@ -106,20 +111,29 @@ static int motr_addb_rec_value_len(enum mio_telemetry_type type, void *value)
 	return len;
 }
 
-static int motr_addb_rec_len(const char *topic,
+static int motr_addb_rec_len(const char *prefix, const char *topic,
 			     enum mio_telemetry_type type,
 			     void *value)
 {
+	int prefix_len = 0;
 	int topic_len;
 	int val_len;
 	int buf_len;
 
+	if (prefix != NULL)
+		prefix_len = strlen(prefix); 
 	assert(topic != NULL);
 	topic_len = strlen(topic);
 	val_len = motr_addb_rec_value_len(type, value);
 	if (val_len < 0)
 		return val_len;
-	buf_len = 2 + topic_len + 1 + val_len + 1;
+	/*
+	 * Magic: 2 bytes
+	 * Prefix: 1 byte for `sign`, 1 byte for length + prefix length
+	 * topic: 1 byte(lenght) + string length,
+	 * value: 1 byte(length) + value size
+	 */
+	buf_len = 2 + prefix_len + 2 + topic_len + 1 + val_len + 1;
 	return buf_len;
 }
 
@@ -385,19 +399,20 @@ mio_motr_addb_encode(const struct mio_telemetry_rec *rec, char **buf, int *len)
 	int rc = 0;
 	int rec_len;
 	char *cursor;	
+	char *prefix;
 	const char *topic;
 	enum mio_telemetry_type type;
 	void *value;
 	char *encoded_buf;
 
-
+	prefix = rec->mtr_prefix;
 	topic = rec->mtr_topic;
 	type = rec->mtr_type;
 	value = rec->mtr_value;
 	if (type <= MIO_TM_TYPE_INVALID || type >= MIO_TM_TYPE_NR)
 		return -EINVAL;
 
-	rec_len = motr_addb_rec_len(topic, type, value);
+	rec_len = motr_addb_rec_len(prefix, topic, type, value);
 	if (rec_len < 0)
 		return rec_len;
 	rec_len = ((rec_len + 7) / 8) * 8; /* Rounded to multiples of 8*/
@@ -407,7 +422,14 @@ mio_motr_addb_encode(const struct mio_telemetry_rec *rec, char **buf, int *len)
 	cursor = encoded_buf;
 
 	/* Magic number. */
-	motr_addb_rec_add_u16(&cursor, mio_motr_addb_magic);
+	motr_addb_rec_add_u16(&cursor, motr_addb_magic);
+
+	/* Prefix. */
+        if (prefix != NULL) {
+		motr_addb_rec_add_u8(&cursor, MOTR_ADDB_PREFIX_SIGN);
+                motr_addb_rec_add_string(&cursor, prefix);
+        } else
+                motr_addb_rec_add_u8(&cursor, MOTR_ADDB_NO_PREFIX_SIGN);
 
 	/* Topic. */
 	motr_addb_rec_add_string(&cursor, topic);
@@ -449,8 +471,10 @@ static int mio_motr_addb_decode(const char *buf, const char *head,
 	int rc = 0;
 	uint16_t magic;
 	uint8_t type_u8;
-	char *cursor;	
+	char *cursor;
+	char *prefix = NULL;
 	char *topic = NULL;
+	uint8_t has_prefix;
 	enum mio_telemetry_type type;
 	void *value = NULL;
 
@@ -466,8 +490,13 @@ static int mio_motr_addb_decode(const char *buf, const char *head,
 	/* Magic number. */
 	cursor = (char *)buf;
 	motr_addb_rec_get_u16(&cursor, &magic);
-	if (magic != mio_motr_addb_magic)
+	if (magic != motr_addb_magic)
 		return -EINVAL;
+
+        /* Prefix. */
+        motr_addb_rec_get_u8(&cursor, &has_prefix);
+        if (has_prefix == MOTR_ADDB_PREFIX_SIGN)
+                motr_addb_rec_get_string(&cursor, &prefix);
 
 	/* Topic. */
 	motr_addb_rec_get_string(&cursor, &topic);
@@ -484,6 +513,7 @@ static int mio_motr_addb_decode(const char *buf, const char *head,
 		return rc;
 	}
 
+	rec->mtr_prefix = prefix;
 	rec->mtr_topic = topic;
 	rec->mtr_type = type;
 	rec->mtr_value = value;
