@@ -477,9 +477,7 @@ static int hsm_workload_generate()
 		hsm_make_oid(&oid, i);
 		rc = hsm_obj_hint_stat(&oid, &chint);
 
-		printf("OBJ%d Hotness:", i);
-		for (j = 0; j < chint.co_hvalue / 5; j++)
-			printf("==");
+                printf("OBJ%d Hotness: %ld", i, chint.co_hvalue);
 		printf("\n");
 	}
 
@@ -612,7 +610,7 @@ char** hsm_shell_split_line(char *line, int *argc)
 	}
 
 	/* set first arg add command name to be getopt compliant */
-	tokens[0] = "c0hsm";
+	tokens[0] = "hsm";
 	position++;
 
 	token = strtok(line, SH_TOK_DELIM);
@@ -624,7 +622,7 @@ char** hsm_shell_split_line(char *line, int *argc)
 			bufsize += SH_TOK_BUFSIZE;
 			tokens = realloc(tokens, bufsize * sizeof(char*));
 			if (!tokens) {
-				fprintf(stderr, "c0hsm: allocation error\n");
+				fprintf(stderr, "hsm: allocation error\n");
 				return NULL;
 			}
 		}
@@ -645,7 +643,7 @@ static int hsm_shell_loop()
 	using_history();
 	while (1) {
 		optind = 1;
-		line = readline("c0hsm> ");
+		line = readline("hsm> ");
 		if (!line)
 			break;
 		if (strlen(line) > 0)
