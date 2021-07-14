@@ -471,6 +471,8 @@ int mio_obj_hotness_to_pool_idx(uint64_t hotness)
 	int hot_pool_idx = 0;
 	int cold_pool_idx = 0;
 	int warm_pool_idx = 0;
+	int warm_interv;
+	int nr_pools = mio_pools.mps_nr_pools;
 	struct mio_pool_id *pool_id;
 
 	if (mio_sys_hint_get(MIO_HINT_HOT_OBJ_THRESHOLD, &hot_thld) < 0)
@@ -482,14 +484,9 @@ int mio_obj_hotness_to_pool_idx(uint64_t hotness)
 	 * Calculate warm pool index according the hotness distance to
 	 * hot and cold thresholds.
 	 */
-	assert(mio_pools.mps_nr_pools >= 1);
-	cold_pool_idx = mio_pools.mps_nr_pools - 1;
+	assert(nr_pools >= 1);
+	cold_pool_idx = nr_pools - 1;
 	assert(hot_pool_idx <= cold_pool_idx);
-	warm_pool_idx =
-		((cold_pool_idx - hot_pool_idx) * (hot_thld - hotness) +
-		 hot_thld - cold_thld - 1) /
-		(hot_thld - cold_thld);
-	assert(warm_pool_idx >= hot_pool_idx && warm_pool_idx <= cold_pool_idx);
 
 	if (hotness > hot_thld) {
 		pool_id = &mio_pools.mps_pools[hot_pool_idx].mp_id;
@@ -504,6 +501,15 @@ int mio_obj_hotness_to_pool_idx(uint64_t hotness)
 			pool_id->mpi_hi, pool_id->mpi_lo);
 		return cold_pool_idx;
 	} else {
+                if (nr_pools <= 2)
+                        warm_pool_idx = cold_pool_idx;
+                else {  
+                        warm_interv = (hot_thld - cold_thld) / (nr_pools - 2);
+                        warm_pool_idx = cold_pool_idx -
+                                        (hotness - cold_thld) / warm_interv - 1;
+                }
+                assert(warm_pool_idx >= hot_pool_idx &&
+                       warm_pool_idx <= cold_pool_idx);
 		pool_id = &mio_pools.mps_pools[warm_pool_idx].mp_id;
 		mio_log(MIO_DEBUG,
 			"[obj_pool_select] WARM Pool: (%"PRIx64":%"PRIx64")\n",
