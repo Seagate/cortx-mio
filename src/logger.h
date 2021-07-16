@@ -43,8 +43,8 @@ int mio_log_init(enum mio_log_level level, char *logfile);
 void mio_log(enum mio_log_level lev, const char *fmt, ...)
 	__attribute__((format(printf, 2, 3)));
 
-#define mio_log_ex(lev, fmt, args...) \
-	mio_log(lev, "%s:%d "fmt, __FUNCTION__, __LINE__, ##args)
+#define mio_log_ex(lev, fmt, ...) \
+	mio_log(lev, "%s:%d "fmt, __FUNCTION__, __LINE__, __VA_ARGS__)
 
 #endif /* __MIO_LOGGER_H__ */
 
