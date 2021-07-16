@@ -174,6 +174,17 @@ provide the path to a directory using --with-motr-headers option.])]
 AC_SUBST([LIBMOTR])
 AC_SUBST([MOTR_HEADERS])
 
+# enable or disable examples
+AC_ARG_ENABLE(
+  [examples],
+  [AS_HELP_STRING([--enable-examples], [build the example programs
+[default=yes]])],
+  [enable_examples="$enableval"],
+  [enable_examples="yes"]
+)
+
+AM_CONDITIONAL(ENABLE_EXAMPLES, [test "$enable_examples" = "yes"])
+
 #
 #------------------------------------------------------------------------------#
 #                         Check required programs                              #
@@ -249,19 +260,22 @@ if test "x$libtelem_only" = xno; then
     AC_CHECK_HEADERS([yaml.h], [],
                      AC_MSG_ERROR([yaml.h is not found. Try to install libyaml-devel package]))
     # Check for openssl (used by MIO examples)
-    AC_CHECK_LIB(crypto, CRYPTO_new_ex_data, [], [AC_MSG_ERROR([library 'crypto' is required for OpenSSL])])
-    FOUND_SSL_LIB="no"
-    AC_CHECK_LIB(ssl, OPENSSL_init_ssl, [FOUND_SSL_LIB="yes"])
-    AC_CHECK_LIB(ssl, SSL_library_init, [FOUND_SSL_LIB="yes"])
-    AS_IF([test "x$FOUND_SSL_LIB" = xno], [AC_MSG_ERROR([library 'ssl' is required for OpenSSL])])
-    AC_CHECK_HEADERS([openssl/md5.h], [],
+    if test "x$enable_examples" = xyes; then 
+        AC_CHECK_LIB(crypto, CRYPTO_new_ex_data, [], [AC_MSG_ERROR([library 'crypto' is required for OpenSSL])])
+        FOUND_SSL_LIB="no"
+        AC_CHECK_LIB(ssl, OPENSSL_init_ssl, [FOUND_SSL_LIB="yes"])
+        AC_CHECK_LIB(ssl, SSL_library_init, [FOUND_SSL_LIB="yes"])
+        AS_IF([test "x$FOUND_SSL_LIB" = xno], [AC_MSG_ERROR([library 'ssl' is required for OpenSSL])])
+        AC_CHECK_HEADERS([openssl/md5.h], [],
                      AC_MSG_ERROR([md5.h is not found. Try to install openssl-devel package]))
 
-    # Check libedit 
-    AC_SEARCH_LIBS([edit], [edit], [],
+        # Check libedit 
+        AC_SEARCH_LIBS([edit], [edit], [],
                      [libedit cannot be found! Try install libedit package])
-    AC_CHECK_HEADERS([editline/readline.h], [],
-                     AC_MSG_ERROR([readline.h is not found. Try to install libedit package]))
+        AC_CHECK_HEADERS([editline/readline.h ], [],
+                     AC_MSG_ERROR([readline.h is not found. Try to install
+libedit (and libedit-devel) package]))
+    fi
 
     # Check libmotr
     #AC_SEARCH_LIBS([m0_motr_init], [motr], [],
