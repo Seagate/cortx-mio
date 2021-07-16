@@ -181,7 +181,7 @@ static int mio_motr_kvs_get(struct mio_kvs_id *kid,
 			    int32_t *rcs, struct mio_op *op)
 {
 	int rc;
-	struct motr_kvs_get_args *args;
+	struct motr_kvs_get_args *args=NULL;
 	struct m0_idx *idx;
 	struct m0_bufvec *keys = NULL;
 	struct m0_bufvec *vals = NULL;
@@ -270,7 +270,7 @@ static int mio_motr_kvs_next(struct mio_kvs_id *kid,
 {
 	int rc;
 	uint32_t flag = 0;
-	struct motr_kvs_next_args *args;
+	struct motr_kvs_next_args *args=NULL;
 	struct m0_idx *idx;
 	struct m0_bufvec *keys = NULL;
 	struct m0_bufvec *vals = NULL;

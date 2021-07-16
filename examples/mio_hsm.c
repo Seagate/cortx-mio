@@ -153,7 +153,7 @@ static int hsm_create_objs()
 static int hsm_write_objs(int idx, int nr_objs, int blk_cnt)
 {
 	int i;
-	int rc;
+	int rc=0;
 	struct mio_obj_id oid;
         struct timeval stv;
 	struct timeval etv;
@@ -185,7 +185,7 @@ static int hsm_write_objs(int idx, int nr_objs, int blk_cnt)
 static int hsm_read_objs(int idx, int nr_objs, int blk_cnt)
 {
 	int i;
-	int rc;
+	int rc=0;
 	struct mio_obj_id oid;
         struct timeval stv;
 	struct timeval etv;
@@ -639,7 +639,7 @@ char** hsm_shell_split_line(char *line, int *argc)
 static int hsm_shell_loop()
 {
 	char *line;
-	int argc;
+	int argc=1;
 	char **argv;
 
 	using_history();

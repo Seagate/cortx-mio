@@ -586,6 +586,7 @@ static int motr_addb_clean_rec(char *rec_buf, int rec_len, char **cleaned_rec)
 		cleaned_rec_len += sizeof(value);
 	}
 
+	assert(cleaned_rec_len>0);
 	*cleaned_rec = realloc(tmp_rec, cleaned_rec_len);
 	return 0;
 }

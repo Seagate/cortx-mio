@@ -550,7 +550,7 @@ motr_obj_iovec_sort(struct motr_obj_rw_args *args)
 	for (i = 1; i < orig_iovcnt; i++) {
 		off = sorted_iovs[i - 1].miov_off;
 		len = sorted_iovs[i - 1].miov_len;
-		base = sorted_iovs[i - 1].miov_base;
+		//base = sorted_iovs[i - 1].miov_base;
 		if (sorted_iovs[i].miov_off < off + len) {
 			rc = -EINVAL;
 			break;
@@ -630,6 +630,7 @@ motr_obj_iovec_partial_page(struct motr_obj_rw_args *args,
 			args->rwa_obj, aligned_iov, aligned_off, aligned_len);
 		if (rc < 0)
 			return rc;
+		assert(aligned_iov!=NULL);
 		args->rwa_aligned_iovcnt++;
 
 		args->rwa_extra_pages[args->rwa_nr_extra_pages] =
@@ -978,6 +979,7 @@ motr_obj_rw_buf_index_vecs_free(struct m0_indexvec *ext,
 				  struct m0_bufvec *data,
 				  struct m0_bufvec *attr)
 {
+	assert(data!=NULL);
 	m0_indexvec_free(ext);
 	mio_mem_free(ext);
 

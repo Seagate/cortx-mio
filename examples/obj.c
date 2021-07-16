@@ -44,6 +44,7 @@ int obj_alloc_iovecs(struct mio_iovec **data, uint64_t bcount,
 			iovecs[i].miov_len = bsize;
 	}
 	*data = iovecs;
+	/* base not leaked, will be deallocated by obj_cleanup_iovecs via iovecs */
 	return 0;
 
 error_exit:
