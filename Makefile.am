@@ -108,6 +108,7 @@ include $(top_srcdir)/tests/Makefile.sub
 #-------------------------------------------------------------------------------
 
 if BUILD_LIBMIO 
+if ENABLE_EXAMPLES
 noinst_PROGRAMS                   += examples/mio_cat 
 noinst_PROGRAMS                   += examples/mio_copy 
 noinst_PROGRAMS                   += examples/mio_touch 
@@ -186,15 +187,18 @@ examples_mio_io_perf_CPPFLAGS = -DMIO_TARGET='mio_io_perf' $(AM_CPPFLAGS)
 examples_mio_io_perf_LDADD    = $(top_builddir)/lib/libmio.la -ledit
 
 endif
+endif
 
 #-------------------------------------------------------------------------------
 #                  Telemetry Examples and Sample Workflow                      #
 #-------------------------------------------------------------------------------
+if ENABLE_EXAMPLES
 noinst_PROGRAMS                   += examples/mio_telemetry_test 
 examples_mio_telemetry_test_CPPFLAGS = -DMIO_TARGET='mio_telemetry_test' $(AM_CPPFLAGS)
 examples_mio_telemetry_test_LDADD    = $(top_builddir)/lib/libtelem.la
 
 include $(top_srcdir)/examples/Makefile.sub
+endif
 
 #-------------------------------------------------------------------------------
 #                           Telemetry Sample Parser                            #
