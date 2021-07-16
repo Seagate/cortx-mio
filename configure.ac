@@ -185,6 +185,17 @@ AC_ARG_ENABLE(
 
 AM_CONDITIONAL(ENABLE_EXAMPLES, [test "$enable_examples" = "yes"])
 
+# enable embedded builds (libtool convenience archives not meant to be
+# installed)
+AC_ARG_ENABLE([embedded],
+              [AS_HELP_STRING([--enable-embedded],
+                              [Enable embedded support (build convenience
+library, no symbol versioning) @<:@default=no@:>@])
+              ],
+              [ac_asm_symver_support=0],
+              [enable_embedded=no])
+AM_CONDITIONAL([EMBEDDED], [test x"$enable_embedded" = x"yes"])
+
 #
 #------------------------------------------------------------------------------#
 #                         Check required programs                              #

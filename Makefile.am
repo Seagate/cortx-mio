@@ -66,9 +66,14 @@ CLEANFILES =
 #                     MIO Telemetry Library (No IO, MOTR and ADDB)             #
 #-------------------------------------------------------------------------------
 
-lib_LTLIBRARIES          += lib/libtelem.la
-lib_libtelem_la_CPPFLAGS  = $(AM_CPPFLAGS)
+if EMBEDDED
+noinst_LTLIBRARIES     += lib/libtelem.la
+lib_libtelem_la_LDFLAGS   = $(AM_LDFLAGS)
+else
+lib_LTLIBRARIES        += lib/libtelem.la
 lib_libtelem_la_LDFLAGS   = -version-info @LT_VERSION@ $(AM_LDFLAGS)
+endif
+lib_libtelem_la_CPPFLAGS  = $(AM_CPPFLAGS)
 lib_libtelem_la_LIBADD    = 
 lib_libtelem_la_SOURCES   =
 
@@ -81,10 +86,15 @@ nobase_telem_include_HEADERS =
 #-------------------------------------------------------------------------------
 
 if BUILD_LIBMIO 
+if EMBEDDED
+noinst_LTLIBRARIES      += lib/libmio.la
+lib_libmio_la_LDFLAGS    = $(AM_LDFLAGS)
+else
 lib_LTLIBRARIES         += lib/libmio.la
+lib_libmio_la_LDFLAGS    = -version-info @LT_VERSION@ $(AM_LDFLAGS)
+endif
 endif
 lib_libmio_la_CPPFLAGS   = -DM0_TARGET='libmotr' -DMIO_MOTR_ADDB $(AM_CPPFLAGS)
-lib_libmio_la_LDFLAGS    = -version-info @LT_VERSION@ $(AM_LDFLAGS)
 #lib_libmio_la_LIBADD    = @MOTR_LIBS@ @YAML_LIBS@ 
 lib_libmio_la_LIBADD     = -lmotr -lyaml 
 lib_libmio_la_SOURCES    =
