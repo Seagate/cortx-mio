@@ -59,7 +59,7 @@ void telem_tests()
 
 	elms_u64 = malloc(8 * sizeof(uint64_t));
 	if (elms_u64 == NULL)
-		return;
+		goto bailout;
 	for (i = 0; i < 1; i++) {
 		sprintf(topic, "mio_telemetry_array_uint64_%d", i);
 		type = MIO_TM_TYPE_ARRAY_UINT64;
@@ -73,6 +73,7 @@ void telem_tests()
 	mio_telemetry_array_advertise(topic, type,
 				      3, elms_u64[0], elms_u64[1], elms_u64[2]);
 
+bailout:
 	free(topic);
 }
 

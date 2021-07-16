@@ -118,6 +118,7 @@ int print_telemetry_rec(struct mio_telemetry_rec *rec)
 
 	if (rc == 0)
 		printf("* %s\n", buf);
+	free(buf);
 	return rc;
 }
 

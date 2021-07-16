@@ -361,8 +361,8 @@ mio_rwl_start(int nr_threads, struct mio_obj_id *oid,
 	 * For simplicity, the same number of READ and WRITE threads
 	 * are created.
 	 */
-	read_threads = malloc(nr_threads * sizeof(*read_threads));
-	write_threads = malloc(nr_threads * sizeof(*write_threads));
+	read_threads = calloc(nr_threads, sizeof(*read_threads));
+	write_threads = calloc(nr_threads, sizeof(*write_threads));
 	if (read_threads == NULL || write_threads == NULL) {
 		rc = -ENOMEM;
 		goto error;
@@ -395,6 +395,7 @@ error:
 static void mio_rwl_stop(int nr_threads)
 {
 	int i;
+	assert(write_threads!=NULL);
 
 	for (i = 0; i < nr_threads; i++) {
 		if (write_threads[i] == NULL)

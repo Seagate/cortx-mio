@@ -239,8 +239,13 @@ static int comp_obj_del_layers(struct mio_obj *obj, int nr_layers)
 
 	layers = malloc(nr_layers * sizeof(*layers));
 	layer_ids = malloc(nr_layers * sizeof(*layer_ids));
-	if (layers == NULL || layer_ids == NULL)
+	if (layers == NULL || layer_ids == NULL) {
+		if(layers)
+			free(layers);
+		if(layer_ids)
+			free(layer_ids);
 		return -ENOMEM;
+	}
 	layer_ids_get(&obj->mo_id, nr_layers, layer_ids);
 
 	for (i = 0; i < nr_layers; i++)

@@ -85,7 +85,7 @@ static
 int kvs_fill_pairs(struct mio_kvs_id *kid, struct mio_kv_pair *pairs,
 		   int start_kno, int nr_pairs, bool set_vals)
 {
-	int   i;
+	int   i=0;
 	int   rc;
 	int   klen = 0;
 	int   vlen = 0;
@@ -129,9 +129,12 @@ int kvs_fill_pairs(struct mio_kvs_id *kid, struct mio_kv_pair *pairs,
 			memcpy(val_str, tmp_str, vlen);
 			pairs[i].mkp_vlen = vlen;
 			pairs[i].mkp_val  = val_str;
+		} else {
+			pairs[i].mkp_val = NULL;
 		}
 	}
 
+	free(tmp_str);
 	return 0;
 
 error:
@@ -142,7 +145,8 @@ error:
 	if (val_str)
 		free(val_str);
 
-	for (i = 0; i < nr_pairs; ++i) {
+	/* only clean up the validly set entries */
+	for (i = i; i-->0; ) {
 		if (pairs[i].mkp_key)
 			free(pairs[i].mkp_key);
 		if (pairs[i].mkp_val)

@@ -286,6 +286,13 @@ static int conf_alloc_driver(int key)
 			break;
 
 		motr_conf = malloc(sizeof(struct mio_motr_config));
+                if(motr_conf==NULL) {
+			return -ENOMEM;
+		}
+		motr_conf->mc_motr_local_addr=NULL;
+		motr_conf->mc_ha_addr=NULL;
+		motr_conf->mc_process_fid=NULL;
+		motr_conf->mc_profile=NULL;
 		mio_driver_confs[MIO_MOTR] = motr_conf;
 		if (motr_conf == NULL)
 			rc = -ENOMEM;
