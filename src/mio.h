@@ -28,7 +28,11 @@ struct mio_kvs_id;
  *   - mio_op_state defines operation states.
  *   - operations on ops such as initialisation and finalisation.
  */
+#ifdef __cplusplus
+enum mio_obj_opcode : int {
+#else
 enum mio_obj_opcode {
+#endif
 	MIO_OBJ_INVALID,
 	MIO_OBJ_CREATE,
 	MIO_OBJ_DELETE,
