@@ -29,7 +29,11 @@ struct mio_kv_pair;
 struct mio_hints;
 struct mio_thread;
 
+#ifdef __cplusplus
+enum mio_obj_opcode : int;
+#else
 enum mio_obj_opcode;
+#endif
 struct mio_obj_ext;
 struct mio_comp_obj_layer;
 struct mio_comp_obj_layout;
