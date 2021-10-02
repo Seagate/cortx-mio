@@ -107,6 +107,25 @@ AS_CASE([$host_os],
         [AC_MSG_ERROR([Unsupported platform detected!])]
 )
 
+#-------------------------------------------------------------------------------
+# Checking for CPU support
+#-------------------------------------------------------------------------------
+ARCH=
+AC_CANONICAL_HOST
+
+AS_CASE([$host_cpu],
+        [x86_64], [ARCH=x86_64],
+        [AC_MSG_ERROR("Only X86_64 platform is supported!")]
+)
+
+AS_IF([test x$ARCH = xx86_64],
+      [
+        AC_DEFINE([CONFIG_X86_64])
+      ]
+)
+
+AC_SUBST([ARCH])
+
 #------------------------------------------------------------------------------#
 #                            Configuration options                             #
 #------------------------------------------------------------------------------#
@@ -115,6 +134,7 @@ AS_CASE([$host_os],
 AH_TEMPLATE([ENABLE_DEBUG],      [Enable debug info and disable optimizations.])
 AH_TEMPLATE([MOTR_LIB],          [Motr library directory])
 AH_TEMPLATE([MOTR_INCLUDE],      [Directory for Motr development header files])
+AH_TEMPLATE([CONFIG_X86_64],     [Support for X86_64 platform])
 
 # Enable/disable options
 AC_ARG_ENABLE([debug],
