@@ -975,7 +975,8 @@ static void motr_obj_data_copy(struct motr_obj_rw_args *args)
 
 static void
 motr_obj_rw_buf_index_vecs_free(struct m0_indexvec *ext,
-				struct m0_bufvec *data)
+				  struct m0_bufvec *data,
+				  struct m0_bufvec *attr)
 {
 	m0_indexvec_free(ext);
 	mio_mem_free(ext);
@@ -987,21 +988,26 @@ motr_obj_rw_buf_index_vecs_free(struct m0_indexvec *ext,
 	mio_mem_free(data->ov_buf);
 	mio_mem_free(data->ov_vec.v_count);
 	mio_mem_free(data);
+
+	m0_bufvec_free(attr);
+	mio_mem_free(attr);
 }
 
 static int
 motr_obj_rw_buf_index_vecs_alloc(struct m0_indexvec **ext,
-				 struct m0_bufvec **data,
-				 int iovcnt)
+				   struct m0_bufvec **data,
+				   struct m0_bufvec **attr, int iovcnt)
 {
 	int rc = 0;
 
 	*ext = mio_mem_alloc(sizeof(struct m0_indexvec));
 	*data = mio_mem_alloc(sizeof(struct m0_bufvec));
-	if (*ext == NULL || *data == NULL)
+	*attr = mio_mem_alloc(sizeof(struct m0_bufvec));
+	if (*ext == NULL || *data == NULL || *attr == NULL)
 		goto error;
 	/* Allocate memory for bufvec and indexvec. */
 	rc = m0_bufvec_empty_alloc(*data, iovcnt) ? :
+	     m0_bufvec_alloc(*attr, iovcnt, 1) ? :
 	     m0_indexvec_alloc(*ext, iovcnt);
 
 	if (rc < 0)
@@ -1010,7 +1016,7 @@ motr_obj_rw_buf_index_vecs_alloc(struct m0_indexvec **ext,
 		return 0;
 
 error:
-	motr_obj_rw_buf_index_vecs_free(*ext, *data);
+	motr_obj_rw_buf_index_vecs_free(*ext, *data, *attr);
 	return rc;
 }
 
@@ -1021,7 +1027,8 @@ motr_obj_io_op_fini(struct mio_driver_op *dop)
 
 	args = (struct motr_obj_rw_op_args *)dop->mdo_op_args;
 	motr_obj_rw_buf_index_vecs_free(args->rwoa_motr_rw_ext,
-					  args->rwoa_motr_rw_data);
+					  args->rwoa_motr_rw_data,
+					  args->rwoa_motr_rw_attr);
 	mio_mem_free(args);
 	return 0;
 }
@@ -1052,19 +1059,16 @@ static int motr_obj_rw_one_op(struct mio_obj *obj,
 	if (op_args == NULL)
 		return -ENOMEM;
 	rc = motr_obj_rw_buf_index_vecs_alloc(&op_args->rwoa_motr_rw_ext,
-					      &op_args->rwoa_motr_rw_data,
-					      iovcnt);
+						&op_args->rwoa_motr_rw_data,
+						&op_args->rwoa_motr_rw_attr,
+						iovcnt);
 	if (rc < 0) {
 		mio_mem_free(op_args);
 		return rc;
 	}
 	ext = op_args->rwoa_motr_rw_ext;
 	data = op_args->rwoa_motr_rw_data;
-	/*
-         * Current motr API (after 3a429ad) requires to set the `attr` to
-         * NULL if if there are no checksums in it.
-         */
-	attr = NULL; 
+	attr = op_args->rwoa_motr_rw_attr;
 
 	/*
 	 * Populate bufvec and indexvec. Avoid copying data
@@ -1078,6 +1082,7 @@ static int motr_obj_rw_one_op(struct mio_obj *obj,
 		ext->iv_vec.v_count[i] = iov[i].miov_len;
 
 		/* we don't want any attributes */
+		attr->ov_vec.v_count[i] = 0;
 	}
 
 	/* Create and launch an RW op. */
@@ -1097,7 +1102,7 @@ static int motr_obj_rw_one_op(struct mio_obj *obj,
 	return 0;
 
 error:
-	motr_obj_rw_buf_index_vecs_free(ext, data);
+	motr_obj_rw_buf_index_vecs_free(ext, data, attr);
 	return rc;
 }
 
