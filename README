@@ -144,3 +144,5 @@ Test log will be stored in /home/users/jusers/umanesan1/sage/gitlab/mio/tests/mi
 	obj_hint_test:  passed
 mio_run_tests: test status: SUCCESS
 
+
+Codacy Badge
