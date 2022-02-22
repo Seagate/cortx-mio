@@ -1,3 +1,8 @@
+
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/edb2670e6aa24aeb899c496c15b596c9)](https://www.codacy.com?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=Seagate/cortx-re&amp;utm_campaign=Badge_Grade)
+
+
+
 ## README
 Copyright: (c) 2020 - 2021 Seagate Technology LLC and/or its its Affiliates,  
 All Rights Reserved  
@@ -57,7 +62,7 @@ Methods to get the above parameters:
   </ol>
 3. add your account to Motr group then run mio_rw_thread or run it as root:  
 
-``sudo ../examples/mio_rw_threads -s 4096 -c 1 -n 10 -t 1 -y ./mio_config.yaml -o 1:12346800``  
+  ``sudo ../examples/mio_rw_threads -s 4096 -c 1 -n 10 -t 1 -y ./mio_config.yaml -o 1:12346800``  
 
 Usage of mio_rw_thread  
 <table>  
@@ -255,7 +260,8 @@ export CLIENT_PROC_FID="0x7200000000000001:0x151"
 /home/users/jusers/umanesan1/sage/gitlab/mio/examples/  
 ```  
 MIO tests starts:  
-Test log will be stored in:
+Test log will be stored in:  
+
 ``/home/users/jusers/umanesan1/sage/gitlab/mio/tests/mio_test_sandbox_2021-01-06-12-48-22/mio_test_2021-01-06-12-48-22.log``  
 
 1. [T1] Object creation and deletion tests </li>  
