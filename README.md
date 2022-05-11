@@ -1,7 +1,10 @@
-
-[![Codacy Badge](https://app.codacy.com/project/badge/Grade/edb2670e6aa24aeb899c496c15b596c9)](https://www.codacy.com?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=Seagate/cortx-re&amp;utm_campaign=Badge_Grade)
-
-
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/a3d60ecc5d8942c9a4b04bcf4b60bf20)](https://www.codacy.com/gh/Seagate/cortx/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=Seagate/cortx&amp;utm_campaign=Badge_Grade)
+[![license](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/Seagate/cortx/blob/main/LICENSE)
+[![Slack](https://img.shields.io/badge/chat-on%20Slack-blue")](https://cortx.link/join-slack)
+[![YouTube](https://img.shields.io/badge/Video-YouTube-red)](https://cortx.link/videos)
+[![Latest Release](https://img.shields.io/github/v/release/Seagate/cortx?label=Latest%20Release)](https://github.com/seagate/cortx/releases/latest)
+[![GitHub contributors](https://img.shields.io/github/contributors/Seagate/cortx)](https://github.com/Seagate/cortx/graphs/contributors/)
+[![SODA Eco project](https://img.shields.io/badge/SODA-ECO%20Project-9cf)](./doc/Soda-welcome-page.md)
 
 ## README
 Copyright: (c) 2020 - 2021 Seagate Technology LLC and/or its its Affiliates,  
@@ -138,28 +141,24 @@ Run the scripts as root or users of Motr group as above.
     <td width=110px>a:12346800 </td>
     <td width=320px>7750c5e4c1549d15bdbc9690587f0c8b </td>
     <td width=320px>7750c5e4c1549d15bdbc9690587f0c8b     </td>
-
   </tr>
 
   <tr>  
       <td>9:12346800 </td>
       <td>cf99430f1feb3b7fa3eb03e396fc509a </td>
       <td> cf99430f1feb3b7fa3eb03e396fc509a </td>
-
   </tr>
 
   <tr>  
       <td>8:12346800 </td>
       <td>f22766e0ae86c0d0777747835b749390  </td>
       <td> f22766e0ae86c0d0777747835b749390 </td>
-
   </tr>
 
   <tr>  
       <td>7:12346800 </td>
       <td>23ba669b5ac4478682f273a13f5db5d6 </td>
       <td> 23ba669b5ac4478682f273a13f5db5d6 </td>
-
   </tr>
 
   <tr>  
