@@ -10,19 +10,19 @@ report_and_exit() {
 	local name=$1
 	local rc=$2
 
-	if [ $rc -eq 0 ]; then
+	if [ "$rc" -eq 0 ]; then
 		echo "$name: test status: SUCCESS"
 	else
 		echo "$name: FAILURE $rc" >&2
 	fi
-	exit $rc
+	exit "$rc"
 }
 
 sandbox_init() {
 	[ -n "${MIO_SANDBOX_DIR:-}" ] || die 'MIO_SANDBOX_DIR: unbound variable'
-	rm -rf $MIO_SANDBOX_DIR
-	mkdir -p $MIO_SANDBOX_DIR
-	pushd $MIO_SANDBOX_DIR >/dev/null
+	rm -rf "$MIO_SANDBOX_DIR"
+	mkdir -p "$MIO_SANDBOX_DIR"
+	pushd "$MIO_SANDBOX_DIR" >/dev/null
 }
 
 sandbox_fini() {
@@ -30,8 +30,8 @@ sandbox_fini() {
 	local rc=${1:-0} # non-zero value denotes unsuccessful termination
 
 	popd &>/dev/null || true
-	if [ -z "${KEEP_MIO_SANDBOX:-}" -a $rc -eq 0 ]; then
-		rm -r $MIO_SANDBOX_DIR
+	if [ -z "${KEEP_MIO_SANDBOX:-}" -a "$rc" -eq 0 ]; then
+		rm -r "$MIO_SANDBOX_DIR"
 	fi
 }
 
@@ -48,7 +48,7 @@ test_eval()
 	fi
 	printf "\n"
 
-	test_count=`expr $test_count + 1`
+	test_count=$(expr $test_count + 1)
 	return $rc;
 }
 
@@ -98,7 +98,7 @@ obj_write()
 
 
 	echo "Writing data to MIO $async_mode..."
-	if [ $async_mode -eq 0 ]; then
+	if [ "$async_mode" -eq 0 ]; then
 		test_eval "$mio_cp -s $io_size -c $io_count -o $oid -y $yaml $src"
 	else
 		test_eval "$mio_cp -s $io_size -c $io_count -o $oid -a -y $yaml $src"
