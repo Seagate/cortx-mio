@@ -17,9 +17,11 @@
 # please email opensource@seagate.com or cortx-questions@seagate.com.
 #
 
-attr={ "name": "mio_write" }
+attr = {"name": "mio_write"}
+
+
 def query(from_, to_):
-    q=f"""
+    q = """
     SELECT (op_fini.time-op_init.time) as time, op_init.opcode
     FROM mio_session_to_op AS op_init
     JOIN mio_op op_fini
@@ -27,6 +29,7 @@ def query(from_, to_):
     WHERE op_init.opcode=9;
     """
     return q
+
 
 if __name__ == '__main__':
     import sys
