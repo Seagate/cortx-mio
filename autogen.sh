@@ -1,3 +1,5 @@
+#!/bin/sh
+
 # Copyright: (c) 2020 - 2021 Seagate Technology LLC and/or its its Affiliates,
 # All Rights Reserved
 #
