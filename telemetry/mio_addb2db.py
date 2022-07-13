@@ -61,7 +61,9 @@ import logging
 import yaml
 import numpy
 import time
-from peewee import *
+from peewee import SqliteDatabase, Model
+from peewee import IntegerField, TextField, FloatField
+from peewee import chunked, OperationalError
 from typing import List
 import multiprocessing
 from itertools import zip_longest
@@ -385,7 +387,6 @@ class ADDB2PP:
     # ['*', '2019-09-18-19:08:50.975943665', 'fom-phase',
     #  'sm_id:', '38', '-->', 'HA_LINK_OUTGOING_STATE_WAIT_REPLY']
     def p_sm_req(measurement, labels, table):
-        name   = measurement[2]
         time   = measurement[1]
         state  = measurement[-1]
         sm_id  = measurement[4]
@@ -683,7 +684,7 @@ def db_consume_data(files: List[str]):
                 t.update(len(tables[k]))
 
 def db_setup_loggers():
-    format='%(asctime)s %(name)s %(levelname)s %(message)s'
+    format='%(asctime)s %(name)s %(levelname)s %(message)s' #pylint: disable=redefined-builtin
     level=logging.INFO
     level_sh=logging.WARN
     logging.basicConfig(filename='logfile.txt',
@@ -718,7 +719,7 @@ def parse_app_data(file, pool):
     try:
         with open(file) as f:
             cont = f.readlines()
-    except:
+    except: #pylint: disable=bare-except
         print(f"Error app reading file {file}")
         return results
 

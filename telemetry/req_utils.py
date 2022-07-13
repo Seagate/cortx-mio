@@ -24,7 +24,7 @@ import re
 import math
 import numpy as np
 import matplotlib.pyplot as plt
-from mio_addb2db import *
+from mio_addb2db import DB, queues, fn, attr 
 from playhouse.shortcuts import model_to_dict
 from typing import List, Dict
 from graphviz import Digraph
@@ -101,7 +101,7 @@ def draw_queue_line(queue, offset):
                      [offset+y/mx for y in _min],
                      [offset+y/mx for y in _max], color='green', alpha=0.2)
 
-    for x,y,nr,i,a,d in zip(xdata, ydata, qnr, _min, _max, dev ):
+    for x,y,nr,i,a,d in zip(xdata, ydata, qnr, _min, _max, dev ): #pylint: disable=unused-variable
         plt.text(x,offset+y/mx, f"{round(y,2)} |{round(a,2)}|")
 
 def draw_timelines(time_table, queue_table, client_start_time, queue_start_time,
@@ -247,10 +247,10 @@ def graph_add_relations(graph: Digraph, relations, schema):
               ("crow_fom_id",  "crow_fom_id", "crow_tx_id"  , ""             , "S1"),
               ("crow_tx_id" ,  ""           , ""            , ""             , "Sl")]
     # flags: '1' - one to one mapping, 's' - stash samples, 'l' - leaf element
-    '''
+    ''' #pylint: disable=pointless-string-statement
 
     stash=[]
-    for rel,fr,to,map,flags in schema:
+    for rel,fr,to,map,flags in schema: #pylint: disable=redefined-builtin
         layer_ids=set([(r[rel], r['cli_pid'], r['srv_pid']) for r in relations if r[rel] is not None])
         for lid_rec in layer_ids:
             lid = lid_rec[0]

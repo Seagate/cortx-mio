@@ -23,10 +23,9 @@
 import os
 import sys
 import yaml
-import peewee
 import logging
 import importlib
-from mio_addb2db import *
+from mio_addb2db import DB, db_init, db_connect, db_close, argparse
 import matplotlib.pyplot as plt
 from itertools import zip_longest as zipl
 
@@ -95,7 +94,7 @@ def query(from_, to_, range_end, plug_name, time_unit):
     plt.tight_layout()
 
 
-def hist(db_name, plug, range, fmt="svg", out="img.svg", time_unit="us", rows=1, size=(12,4)):
+def hist(db_name, plug, range, fmt="svg", out="img.svg", time_unit="us", rows=1, size=(12,4)): #pylint: disable=redefined-builtin
     stages = yaml.safe_load(range)
     db_init(db_name)
     db_connect()
@@ -121,7 +120,7 @@ def load():
                     PLUG[plug.attr['name']] = plug.query
                     logging.info(f"Plugin loaded: file={f}, " \
                                  f"plugin={plug.attr['name']}")
-                except:
+                except: #pylint: disable=bare-except
                     logging.debug(f"File {f} is not a plugin")
 
 if __name__ == "__main__":

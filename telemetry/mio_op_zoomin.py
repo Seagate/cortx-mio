@@ -20,6 +20,10 @@
 import io_req as ior
 import md_req as mdr
 from mio_addb2db import *
+from mio_addb2db import mio_op_to_motr_op, mio_session_to_op 
+from mio_addb2db import graph_add_relations, argparse, query2dlist
+from mio_addb2db import DB, db_init, db_connect, db_close
+from typing import List
 from graphviz import Digraph
 from req_utils import *
 
@@ -77,7 +81,6 @@ def get_timelines(mio_ops: List[str], pid: str, create_attr_graph: bool = False,
                     clov_req_d = list(map(lambda tpl: dict(zip(lbls, tpl)),
                                           DB.execute_sql(clvreq).fetchall()))
                     time_table.append(clov_req_d)
-            continue
 
             if create_attr_graph:
                 attr_graph = Digraph(strict=True, format='png', node_attr = {'shape': 'plaintext'})
@@ -97,7 +100,7 @@ def get_timelines(mio_ops: List[str], pid: str, create_attr_graph: bool = False,
                                                                    create_attr_graph, True, attr_graph)
                         found = True
                     except Exception:
-                        pass
+                        pass # nosec
                     i = i + 1
 
                 if found:
@@ -140,8 +143,8 @@ def create_table_index(tbl_model):
         iq = index_query.format(f"idx_{tbl_name}_{f}", tbl_name, f)
         try:
             DB.execute_sql(iq)
-        except:
-            pass
+        except: #pylint: disable=bare-except
+            pass # nosec
 
 def create_indexes():
     for tbl in db_create_delete_tables:

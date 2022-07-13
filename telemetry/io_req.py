@@ -21,8 +21,12 @@
 # https://github.com/Seagate/cortx-motr/blob/main/scripts/addb-py/chronometry/io_req.py
 
 import sys
-from mio_addb2db import *
-from typing import List, Dict
+from mio_addb2db import cob_req, ioo_req, client_req, rpc_req, fom_req
+from mio_addb2db import stio_req, be_tx, fom_req_state
+from mio_addb2db import query2dlist, prepare_time_table, fill_queue_table, times_tag_append
+from mio_addb2db import graph_add_relations, draw_timelines, argparse
+from mio_addb2db import DB, db_init, db_connect, db_close
+from typing import List
 from graphviz import Digraph
 from req_utils import *
 
@@ -253,7 +257,7 @@ if __name__ == '__main__':
         get_timelines(args.client_id, args.grange, args.pid, args.attr, False, None, args.cob)
 
     if args.queues:
-        fill_queue_table(queue_table, queue_start_time)
+        fill_queue_table(queue_table, queue_start_time) #pylint: disable = no-value-for-parameter
 
     db_close()
 
