@@ -289,7 +289,6 @@ static struct mio_driver_sys_ops mio_motr_sys_ops = {
 
 static void mio_motr_op_fini(struct mio_op *mop)
 {
-	struct m0_op *cop;
 	struct mio_driver_op *dop;
 
 	dop = mop->mop_drv_op_chain.mdoc_head;
@@ -297,9 +296,8 @@ static void mio_motr_op_fini(struct mio_op *mop)
 		mop->mop_drv_op_chain.mdoc_head = dop->mdo_next;
 		dop->mdo_next = NULL;
 
-		cop = (struct m0_op *)dop->mdo_op;
-		m0_op_fini(cop);
-		m0_op_free(cop);
+		m0_op_fini((struct m0_op *)dop->mdo_op);
+		m0_op_free((struct m0_op *)dop->mdo_op);
 		if (dop->mdo_op_fini)
 			dop->mdo_op_fini(dop);
 		mio_mem_free(dop);

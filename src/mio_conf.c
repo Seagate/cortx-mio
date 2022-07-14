@@ -32,7 +32,8 @@
 #include "mio.h"
 
 enum {
-	YAML_MAX_KEY_LEN = 128
+	YAML_MAX_KEY_LEN = 128,
+	YAML_MAX_VAL_LEN = 128
 };
 
 enum conf_type {
@@ -265,9 +266,9 @@ static enum mio_log_level conf_get_log_level(const char *str)
 		return MIO_LOG_INVALID;
 }
 
-static int conf_copy_str(char **to, char *from)
+static int conf_copy_str(char **to, char *from, int len)
 {
-	int len = strlen(from) + 1;
+	//int len = strnlen(from, max_len) + 1;
 
 	*to = mio_mem_alloc(len);
 	if (*to == NULL)
@@ -297,8 +298,9 @@ static int conf_alloc_driver(int key)
 		mio_driver_confs[MIO_MOTR] = motr_conf;
 		if (motr_conf == NULL)
 			rc = -ENOMEM;
-		motr_conf->mc_max_iosize_per_dev =
-			MIO_MOTR_DEFAULT_IOSIZE_PER_DEV;
+		else
+			motr_conf->mc_max_iosize_per_dev =
+				MIO_MOTR_DEFAULT_IOSIZE_PER_DEV;
 		break;
 	case CEPH:
 		fprintf(stderr, "Ceph driver is not supported yet!");
@@ -436,7 +438,7 @@ static int conf_extract_key(enum conf_key *key, char *token)
 	return rc;
 }
 
-static int conf_extract_value(enum conf_key key, char *value)
+static int conf_extract_value(enum conf_key key, char *value, int vlen)
 {
 	int rc = 0;
 	int slen = 0;
@@ -457,7 +459,7 @@ static int conf_extract_value(enum conf_key key, char *value)
 		break;
 	case MIO_TELEMETRY_PREFIX:
 		assert(mio_instance != NULL && value != NULL);
-		rc = conf_copy_str(&mio_instance->m_telem_prefix, value);
+		rc = conf_copy_str(&mio_instance->m_telem_prefix, value, vlen);
 		break;
 	case MIO_LOG_LEVEL:
 		assert(mio_instance != NULL);
@@ -467,19 +469,19 @@ static int conf_extract_value(enum conf_key key, char *value)
 		break;
 	case MIO_LOG_DIR:
 		assert(mio_instance != NULL && value != NULL);
-		rc = conf_copy_str(&mio_instance->m_log_dir, value);
+		rc = conf_copy_str(&mio_instance->m_log_dir, value, vlen);
 		break;
 	case MOTR_INST_ADDR:
-		rc = conf_copy_str(&motr_conf->mc_motr_local_addr, value);
+		rc = conf_copy_str(&motr_conf->mc_motr_local_addr, value, vlen);
 		break;
 	case MOTR_HA_ADDR:
-		rc = conf_copy_str(&motr_conf->mc_ha_addr, value);
+		rc = conf_copy_str(&motr_conf->mc_ha_addr, value, vlen);
 		break;
 	case MOTR_PROFILE:
-		rc = conf_copy_str(&motr_conf->mc_profile, value);
+		rc = conf_copy_str(&motr_conf->mc_profile, value, vlen);
 		break;
 	case MOTR_PROCESS_FID:
-		rc = conf_copy_str(&motr_conf->mc_process_fid, value);
+		rc = conf_copy_str(&motr_conf->mc_process_fid, value, vlen);
 		break;
 	case MOTR_TM_RECV_QUEUE_MIN_LEN:
 		motr_conf->mc_tm_recv_queue_min_len = atoi(value);
@@ -502,10 +504,10 @@ static int conf_extract_value(enum conf_key key, char *value)
 		motr_conf->mc_is_read_verify = atoi(value);
 		break;
 	case MOTR_USER_GROUP:
-		rc = conf_copy_str(&motr_conf->mc_motr_group, value);
+		rc = conf_copy_str(&motr_conf->mc_motr_group, value, vlen);
 		break;
 	case MOTR_POOL_DEFAULT:
-		slen = strlen(value);
+		slen = strnlen(value, MIO_POOL_MAX_NAME_LEN);
 		if (slen > MIO_POOL_MAX_NAME_LEN)
 			rc = -EINVAL;
 		else
@@ -513,7 +515,7 @@ static int conf_extract_value(enum conf_key key, char *value)
 		break;
 	case MOTR_POOL_NAME:
 		pool = mio_pools.mps_pools + mio_pools.mps_nr_pools - 1;
-		slen = strlen(value);
+		slen = strnlen(value, MIO_POOL_MAX_NAME_LEN);
 		if (slen > MIO_POOL_MAX_NAME_LEN)
 			rc = -EINVAL;
 		else
@@ -547,13 +549,14 @@ int mio_conf_init(const char *config_file)
 	bool is_key = true;
 	enum conf_key key = MIO_CONF_INVALID;
 	char *scalar_value;
+	int scalar_vlen;
 	bool eof;
 	yaml_parser_t parser;
 	yaml_token_t token;
 
 	memcpy(mio_default_pool_name,
 	       mio_default_pool_null_str,
-	       strlen(mio_default_pool_null_str) + 1);
+	       strnlen(mio_default_pool_null_str, MIO_POOL_MAX_NAME_LEN) + 1);
 	
 	if (!yaml_parser_initialize(&parser)) {
 		/* MIO logger has not been initialised yet, so use fprintf. */
@@ -586,8 +589,12 @@ int mio_conf_init(const char *config_file)
 			scalar_value = (char *)token.data.scalar.value;
 			if (is_key)
 				rc = conf_extract_key(&key, scalar_value);
-			else
-				rc = conf_extract_value(key, scalar_value);
+			else {
+				scalar_vlen =
+				    strnlen(scalar_value, YAML_MAX_VAL_LEN);
+				rc = conf_extract_value(key, scalar_value,
+							scalar_vlen);
+			}
 			break;
 		case YAML_BLOCK_MAPPING_START_TOKEN:
 			break;

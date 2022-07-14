@@ -58,7 +58,7 @@ static void telem_log_skip_delimiter(char **buf)
 	int len;
 	char *cursor;
 
-	len = strlen(*buf);
+	len = strnlen(*buf, MIO_LOG_MAX_REC_LEN);
 	cursor = *buf;
 	while (isspace(*cursor)) {
 		cursor++;
@@ -73,7 +73,7 @@ static void telem_log_jump_to_delimiter(char **buf)
 	int len;
 	char *cursor;
 
-	len = strlen(*buf);
+	len = strnlen(*buf, MIO_LOG_MAX_REC_LEN);
 	cursor = *buf;
 	while (!isspace(*cursor) && *cursor != '\n') {
 		cursor++;
@@ -260,7 +260,7 @@ static void telem_log_rec_add_string(char **rec, const char *string)
 	uint8_t str_len;
 
 	assert(string != NULL);
-	str_len = strlen(string);
+	str_len = strnlen(string, MIO_LOG_MAX_REC_LEN);
 	mio_mem_copy(*rec, (char *)string, str_len);
 	*rec += str_len;
 	**rec = ' ';
@@ -400,7 +400,7 @@ mio_telem_log_encode(const struct mio_telemetry_rec *rec, char **buf, int *len)
 		goto exit;
 	}
 
-	rec_len = strlen(rec_buf) + 1;
+	rec_len = strnlen(rec_buf, MIO_LOG_MAX_REC_LEN) + 1;
 	rec_buf = realloc(rec_buf, rec_len);
 	*len = rec_len;
 exit:
@@ -424,10 +424,12 @@ static int mio_telem_log_decode(const char *buf, const char *head,
 		return -EINVAL;
 
 	/* Time string. */
-	rec->mtr_time_str = mio_mem_alloc(strlen(head) + 1);
+	rec->mtr_time_str =
+	    mio_mem_alloc(strnlen(head, MIO_LOG_MAX_REC_LEN) + 1);
 	if (rec->mtr_time_str == NULL)
 		return -ENOMEM;
-	mio_mem_copy(rec->mtr_time_str, (char *)head, strlen(head) + 1);
+	mio_mem_copy(rec->mtr_time_str, (char *)head,
+		     strnlen(head, MIO_LOG_MAX_REC_LEN) + 1);
 
 	/* Prefix. */
 	cursor = (char *)buf;
@@ -483,7 +485,9 @@ static int mio_telem_log_load(void *parse_stream, char **rec_buf,
 		if (strstr(line, mio_log_levels[MIO_TELEMETRY].name) == NULL)
 			continue;
 
-		clock = line + strlen(mio_log_levels[MIO_TELEMETRY].name) + 2;
+		clock = line +
+			strnlen(mio_log_levels[MIO_TELEMETRY].name,
+				MIO_LOG_MAX_REC_LEN) + 2;
 		telem_log_skip_delimiter(&clock);
 		rec = clock;
 		telem_log_jump_to_delimiter(&rec);

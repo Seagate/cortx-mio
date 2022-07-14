@@ -83,7 +83,7 @@ motr_kvs_keys_vals_alloc(int opcode, int nr_kvps,
 
 	*ret_keys = keys;
 	*ret_vals = vals;
-	return 0;
+	return rc;
 
 error:
 	mio__motr_bufvec_free(keys);

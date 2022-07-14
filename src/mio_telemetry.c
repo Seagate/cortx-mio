@@ -340,7 +340,7 @@ static int telemetry_conf_save(struct mio_telemetry_conf *conf)
 	case MIO_TM_ST_LOG:
 		mio_log_dir = (char *)conf->mtc_store_conf;
 		if (mio_log_dir != NULL) {
-			len = strlen(mio_log_dir) + 1;
+			len = strnlen(mio_log_dir, MIO_LOG_DIR_PATH_MAX) + 1;
 			mio_telem_conf.mtc_store_conf = mio_mem_alloc(len);
 			if (mio_telem_conf.mtc_store_conf == NULL)
 				rc = -ENOMEM;

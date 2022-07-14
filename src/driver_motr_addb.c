@@ -123,9 +123,9 @@ static int motr_addb_rec_len(const char *prefix, const char *topic,
 	int buf_len;
 
 	if (prefix != NULL)
-		prefix_len = strlen(prefix); 
+		prefix_len = strnlen(prefix, MIO_MOTR_ADDB_MAX_PAYLOAD); 
 	assert(topic != NULL);
-	topic_len = strlen(topic);
+	topic_len = strnlen(topic, MIO_MOTR_ADDB_MAX_PAYLOAD);
 	val_len = motr_addb_rec_value_len(type, value);
 	if (val_len < 0)
 		return val_len;
@@ -352,7 +352,7 @@ static void motr_addb_rec_add_string(char **rec, const char *string)
 {
 	uint8_t str_len;
 
-	str_len = strlen(string);
+	str_len = strnlen(string, MIO_MOTR_ADDB_MAX_PAYLOAD);
 	motr_addb_rec_add_u8(rec, str_len);
 
 	mio_mem_copy(*rec, (char *)string, str_len);
@@ -484,10 +484,12 @@ static int mio_motr_addb_decode(const char *buf, const char *head,
 		return -EINVAL;
 
 	/* Time string. */
-	rec->mtr_time_str = mio_mem_alloc(strlen(head) + 1);
+	rec->mtr_time_str =
+	    mio_mem_alloc(strnlen(head, MIO_MOTR_ADDB_MAX_PAYLOAD) + 1);
 	if (rec->mtr_time_str == NULL)
 		return -ENOMEM;
-	mio_mem_copy(rec->mtr_time_str, (char *)head, strlen(head) + 1);
+	mio_mem_copy(rec->mtr_time_str, (char *)head,
+		     strnlen(head, MIO_MOTR_ADDB_MAX_PAYLOAD) + 1);
 
 	/* Magic number. */
 	cursor = (char *)buf;
@@ -527,7 +529,7 @@ static void motr_addb_skip_delimiter(char **buf)
 	int len;
 	char *cursor;
 
-	len = strlen(*buf);
+	len = strnlen(*buf, MIO_MOTR_ADDB_MAX_PAYLOAD);
 	cursor = *buf;
 	while (isspace(*cursor) || *cursor == '?' || *cursor == ',') {
 		cursor++;
@@ -542,7 +544,7 @@ static void motr_addb_jump_to_delimiter(char **buf)
 	int len;
 	char *cursor;
 
-	len = strlen(*buf);
+	len = strnlen(*buf, MIO_MOTR_ADDB_MAX_PAYLOAD);
 	cursor = *buf;
 	while (!isspace(*cursor) && *cursor != '?' && *cursor != ',') {
 		cursor++;
@@ -589,7 +591,7 @@ static int motr_addb_clean_rec(char *rec_buf, int rec_len, char **cleaned_rec)
 	}
 
 	*cleaned_rec = realloc(tmp_rec, cleaned_rec_len);
-	return 0;
+	return rc;
 }
 
 /*
@@ -673,7 +675,7 @@ static int mio_motr_addb_load(void *parse_stream, char **rec_buf,
 	/* Search for the start (`|`) of ADDB record labels. */
 	end_of_rec = strchr(st_of_rec, '|');
 	if (end_of_rec == NULL)
-		end_of_rec = line + strlen(line);
+		end_of_rec = line + strnlen(line, MIO_MOTR_ADDB_MAX_PAYLOAD);
 
 	/* Now for the real telemetry data. */
 	dirty_rec = st_of_rec;

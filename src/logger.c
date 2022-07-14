@@ -20,6 +20,10 @@
 #include "logger.h"
 #include "utils.h"
 
+enum {
+	MIO_LOG_LEVEL_NAME_MAX = 16
+};
+
 struct mio_log_level_name mio_log_levels[] = {
         [MIO_ERROR]	= {"error"},
         [MIO_WARN]	= {"warning"},
@@ -75,19 +79,20 @@ void mio_log(enum mio_log_level lev, const char *fmt, ...)
 
 	va_start(va, fmt);
 
-	head_len = strlen(mio_log_levels[lev].name) + 3; 
+	head_len = strnlen(mio_log_levels[lev].name, MIO_LOG_LEVEL_NAME_MAX) + 3; 
 	assert(head_len < MIO_LOG_MAX_REC_LEN);
 	snprintf(log_rec_ptr, head_len, "[%s]", mio_log_levels[lev].name);
 	log_rec_ptr += head_len - 1;
 	*log_rec_ptr = ' ';
 	log_rec_ptr += 1;
 
+	time_len = strnlen(timestamp, MIO_LOG_MAX_TIMESTAMP_LEN);
 	rc = log_time(timestamp, MIO_LOG_MAX_TIMESTAMP_LEN, false);
-	if (rc < 0 || strlen(timestamp) > MIO_LOG_MAX_REC_LEN - head_len) {
+	if (rc < 0 || time_len > MIO_LOG_MAX_REC_LEN - head_len) {
 		fprintf(stderr, "Timestamp is too log! How is it possible?\n");
+		va_end(va);
 		return;
 	}
-	time_len = strlen(timestamp);
 	mio_mem_copy(log_rec_ptr, timestamp, time_len);
 	log_rec_ptr += time_len;
 	*log_rec_ptr = ' ';
@@ -100,7 +105,7 @@ void mio_log(enum mio_log_level lev, const char *fmt, ...)
 		
 	va_end(va);
 
-	log_rec_len = strlen(log_rec);
+	log_rec_len = strnlen(log_rec, MIO_LOG_MAX_REC_LEN);
 	rc = fwrite(log_rec, log_rec_len, 1, mio_log_file);
 	if (rc != 1) {
 		fprintf(stderr, "Failed writing to log file!\n");
