@@ -122,6 +122,10 @@ struct mio_telemetry_rec_ops {
 	
 };
 
+enum {
+	MIO_TELEM_PREFIX_MAX = 1024
+};
+
 struct mio_telemetry_conf {
 	enum mio_telemetry_store_type mtc_type;
 	/* Prefix added to the beginning of a telemetry record. */

@@ -470,7 +470,7 @@ int mio_obj_hotness_to_pool_idx(uint64_t hotness)
 	uint64_t cold_thld;
 	int hot_pool_idx = 0;
 	int cold_pool_idx = 0;
-	int warm_pool_idx = 0;
+	int warm_pool_idx;
 	int warm_interv;
 	int nr_pools = mio_pools.mps_nr_pools;
 	struct mio_pool_id *pool_id;
