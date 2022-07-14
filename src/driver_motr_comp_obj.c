@@ -314,6 +314,21 @@ mio_motr_comp_obj_del_layers(struct mio_obj *obj,
  * Temporary solution: MIO hacks it by iterating the layer list by explictly
  * manipulating the list as m0_tl_* APIs are exposed in 'libmotr'.
  */
+#define comp_obj_get_layout_n_args(op, cop, clayout, mlayout, args)  \
+	do { \
+		cop = (struct m0_op *) \
+		op->mop_drv_op_chain.mdoc_head->mdo_op; \
+		assert(cop != NULL); \
+		if (cop->op_sm.sm_state != M0_OS_STABLE) \
+			return -EIO; \
+			\
+		args = (struct motr_comp_obj_get_layers_args *) \
+		       op->mop_drv_op_chain.mdoc_head->mdo_post_proc_data; \
+		mlayout = (struct mio_comp_obj_layout *)args->gla_data; \
+		clayout = (struct m0_client_layout *)args->gla_clayout; \
+	} while (0)
+
+
 #ifdef __MIO_MOTR_COMP_OBJ_LAYER_GET_SUPP__
 static int motr_comp_obj_list_layers_pp(struct mio_op *op)
 {
@@ -326,16 +341,7 @@ static int motr_comp_obj_list_layers_pp(struct mio_op *op)
 	struct mio_comp_obj_layout *mlayout;
 	struct motr_comp_obj_get_layers_args *args;
 
-	cop = (struct m0_op *)
-	      op->mop_drv_op_chain.mdoc_head->mdo_op;
-	assert(cop != NULL);
-	if (cop->op_sm.sm_state != M0_OS_STABLE)
-		return -EIO;
-
-	args = (struct motr_comp_obj_get_layers_args *)
-	       op->mop_drv_op_chain.mdoc_head->mdo_post_proc_data;
-	mlayout = (struct mio_comp_obj_layout *)args->gla_data;
-	clayout = (struct m0_client_layout *)args->gla_clayout;
+	comp_obj_get_layout_n_args(op, cop, clayout, mlayout, args);
 
 	/* Retrieve layers. */
 	rc = m0_composite_layer_get(clayout, &nr_layers, &layer_ids);
@@ -379,16 +385,7 @@ static int motr_comp_obj_list_layers_pp(struct mio_op *op)
 	struct m0_tlink *tlnk;
 	struct motr_comp_obj_get_layers_args *args;
 
-	cop = (struct m0_op *)
-	      op->mop_drv_op_chain.mdoc_head->mdo_op;
-	assert(cop != NULL);
-	if (cop->op_sm.sm_state != M0_OS_STABLE)
-		return -EIO;
-
-	args = (struct motr_comp_obj_get_layers_args *)
-	       op->mop_drv_op_chain.mdoc_head->mdo_post_proc_data;
-	mlayout = (struct mio_comp_obj_layout *)args->gla_data;
-	clayout = (struct m0_client_layout *)args->gla_clayout;
+	comp_obj_get_layout_n_args(op, cop, clayout, mlayout, args);
 	comp_layout = container_of(clayout, struct m0_client_composite_layout,
 				   ccl_layout);
 

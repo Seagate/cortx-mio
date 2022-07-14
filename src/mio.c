@@ -457,7 +457,7 @@ int mio_obj_size(struct mio_obj *obj, struct mio_op *op)
 	return rc;
 }
 
-int mio_obj_lock(struct mio_obj *obj)
+static int obj_lock_check(struct mio_obj *obj)
 {
 	int rc;
 
@@ -470,23 +470,17 @@ int mio_obj_lock(struct mio_obj *obj)
 	    obj->mo_drv_obj_ops->moo_unlock == NULL)
 		return -EOPNOTSUPP;
 
-	return obj->mo_drv_obj_ops->moo_lock(obj);
+	return 0;
+}
+
+int mio_obj_lock(struct mio_obj *obj)
+{
+	return obj_lock_check(obj)? : obj->mo_drv_obj_ops->moo_lock(obj);
 }
 
 int mio_obj_unlock(struct mio_obj *obj)
 {
-	int rc;
-
-	rc = mio_instance_check();
-	if (rc < 0)
-		return rc;
-	if (obj == NULL)
-		return -EINVAL;
-	if (obj->mo_drv_obj_ops->moo_lock == NULL ||
-	    obj->mo_drv_obj_ops->moo_unlock == NULL)
-		return -EOPNOTSUPP;
-
-	return obj->mo_drv_obj_ops->moo_unlock(obj);
+	return obj_lock_check(obj)? : obj->mo_drv_obj_ops->moo_unlock(obj);
 }
 
 /* --------------------------------------------------------------- *
@@ -517,8 +511,12 @@ static int kvs_op_init(struct mio_op *op, struct mio_kvs_id *kid,
 {
 	int rc;
 
-	if (op == NULL)
+	rc = kvs_driver_check();
+	if (rc < 0)
+		return rc;
+	if (kid == NULL || op == NULL)
 		return -EINVAL;
+
 	rc = mio_instance_check();
 	if (rc < 0)
 		return rc;
@@ -540,12 +538,6 @@ int mio_kvs_pair_get(struct mio_kvs_id *kid,
 {
 	int rc;
 
-	rc = kvs_driver_check();
-	if (rc < 0)
-		return rc;
-	if (kid == NULL || op == NULL)
-		return -EINVAL;
-
 	rc = kvs_op_init(op, kid, MIO_KVS_GET)? :
 	     drv_kvs_ops->mko_get(kid, nr_kvps, kvps, rcs, op);
 	return rc;
@@ -557,12 +549,6 @@ int mio_kvs_pair_next(struct mio_kvs_id *kid,
 		      struct mio_op *op)
 {
 	int rc;
-
-	rc = kvs_driver_check();
-	if (rc < 0)
-		return rc;
-	if (kid == NULL || op == NULL)
-		return -EINVAL;
 
 	rc = kvs_op_init(op, kid, MIO_KVS_GET)? :
 	     drv_kvs_ops->mko_next(kid, nr_kvps, kvps,
@@ -577,12 +563,6 @@ int mio_kvs_pair_put(struct mio_kvs_id *kid,
 {
 	int rc;
 
-	rc = kvs_driver_check();
-	if (rc < 0)
-		return rc;
-	if (kid == NULL || op == NULL)
-		return -EINVAL;
-
 	rc = kvs_op_init(op, kid, MIO_KVS_PUT)? :
 	     drv_kvs_ops->mko_put(kid, nr_kvps, kvps, rcs, op);
 	return rc;
@@ -594,12 +574,6 @@ int mio_kvs_pair_del(struct mio_kvs_id *kid,
 {
 	int rc;
 
-	rc = kvs_driver_check();
-	if (rc < 0)
-		return rc;
-	if (kid == NULL || op == NULL)
-		return -EINVAL;
-
 	rc = kvs_op_init(op, kid, MIO_KVS_DEL);
 	     drv_kvs_ops->mko_del(kid, nr_kvps, kvps, rcs, op);
 	return rc;
@@ -609,12 +583,6 @@ int mio_kvs_create_set(struct mio_kvs_id *kid, struct mio_op *op)
 {
 	int rc;
 
-	rc = kvs_driver_check();
-	if (rc < 0)
-		return rc;
-	if (kid == NULL || op == NULL)
-		return -EINVAL;
-
 	rc = kvs_op_init(op, kid, MIO_KVS_CREATE_SET)? :
 	     drv_kvs_ops->mko_create_set(kid, op);
 	return rc;
@@ -623,12 +591,6 @@ int mio_kvs_create_set(struct mio_kvs_id *kid, struct mio_op *op)
 int mio_kvs_del_set(struct mio_kvs_id *kid, struct mio_op *op)
 {
 	int rc;
-
-	rc = kvs_driver_check();
-	if (rc < 0)
-		return rc;
-	if (kid == NULL || op == NULL)
-		return -EINVAL;
 
 	rc = kvs_op_init(op, kid, MIO_KVS_DELETE_SET)? :
 	     drv_kvs_ops->mko_del_set(kid, op);
