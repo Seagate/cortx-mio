@@ -13,6 +13,15 @@
 #ifndef __DRIVER_MOTR_H__
 #define __DRIVER_MOTR_H__
 
+#undef PACKAGE
+#undef PACKAGE_BUGREPORT
+#undef PACKAGE_NAME
+#undef PACKAGE_STRING
+#undef PACKAGE_TARNAME
+#undef PACKAGE_URL
+#undef PACKAGE_VERSION
+#undef VERSION
+
 #include "lib/memory.h"
 #include "motr/client.h"
 #include "motr/idx.h"

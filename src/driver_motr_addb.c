@@ -11,8 +11,10 @@
 #include <stdio.h>
 #include <errno.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <ctype.h>
 #include <addb2/addb2_internal.h>
 
 #include "utils.h"
