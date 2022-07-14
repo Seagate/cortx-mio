@@ -26,6 +26,7 @@ static int motr_obj_attrs_get_pp(struct mio_op *op);
 static int motr_obj_attrs_query(int opcode, struct mio_obj *obj,
 				  mio_driver_op_postprocess op_pp,
 				  struct mio_op *op);
+static int motr_obj_attrs_update_sync(struct mio_obj *obj);
 
 void mio__uint128_to_obj_id(struct m0_uint128 *uint128,
 			    struct mio_obj_id *oid)
@@ -109,8 +110,6 @@ error:
 static int mio_motr_obj_close(struct mio_obj *obj)
 {
 	int rc = 0;
-	struct mio_op mop;
-	struct m0_op *cop;
 
 	if (!obj->mo_attrs_updated)
 		goto obj_fini;
@@ -122,21 +121,7 @@ static int mio_motr_obj_close(struct mio_obj *obj)
 #endif
 
 	/* Update object attributes to metada key-value store. */
-	mio_op_init(&mop);
-	mio_obj_op_init(&mop, obj, MIO_OBJ_ATTRS_SET);
-	rc = motr_obj_attrs_query(M0_IC_PUT, obj,
-				  motr_obj_attrs_query_free_pp, &mop);
-	if (rc < 0)
-		return rc;
-
-	cop = MIO_MOTR_OP((&mop));
-	rc = m0_op_wait(cop,
-			M0_BITS(M0_OS_FAILED,
-				M0_OS_STABLE),
-			M0_TIME_NEVER);
-	rc = rc? : m0_rc(cop);
-	m0_op_fini(cop);
-	m0_op_free(cop);
+	rc = motr_obj_attrs_update_sync(obj);
 
 obj_fini:
 	/* Finalise motr's object. */
@@ -1642,6 +1627,32 @@ error:
 	return rc;
 }
 
+/**
+ * Update object's attrs and wait till it completes.
+ */
+static int motr_obj_attrs_update_sync(struct mio_obj *obj)
+{
+	int rc;
+	struct mio_op mop;
+	struct m0_op *cop;
+
+	mio_op_init(&mop);
+	mio_obj_op_init(&mop, obj, MIO_OBJ_ATTRS_SET);
+	rc = motr_obj_attrs_query(M0_IC_PUT, obj,
+				    motr_obj_attrs_query_free_pp, &mop);
+	if (rc < 0)
+		return rc;
+
+	cop = MIO_MOTR_OP((&mop));
+	rc = m0_op_wait(cop, M0_BITS(M0_OS_FAILED, M0_OS_STABLE),
+			M0_TIME_NEVER);
+	rc = rc? : m0_rc(cop);
+	m0_op_fini(cop);
+	m0_op_free(cop);
+	return rc;
+
+}
+
 static int motr_obj_attrs_query_free_pp(struct mio_op *op)
 {
 	struct motr_obj_attrs_pp_args *args;
@@ -1746,24 +1757,7 @@ static int mio_motr_obj_unlock(struct mio_obj *obj)
 
 static int mio_motr_obj_hint_store(struct mio_obj *obj)
 {
-	int rc;
-	struct mio_op mop;
-	struct m0_op *cop;
-
-	mio_op_init(&mop);
-	mio_obj_op_init(&mop, obj, MIO_OBJ_ATTRS_SET);
-	rc = motr_obj_attrs_query(M0_IC_PUT, obj,
-				    motr_obj_attrs_query_free_pp, &mop);
-	if (rc < 0)
-		return rc;
-
-	cop = MIO_MOTR_OP((&mop));
-	rc = m0_op_wait(cop, M0_BITS(M0_OS_FAILED, M0_OS_STABLE),
-			M0_TIME_NEVER);
-	rc = rc? : m0_rc(cop);
-	m0_op_fini(cop);
-	m0_op_free(cop);
-	return rc;
+	return motr_obj_attrs_update_sync(obj);
 }
 
 static int mio_motr_obj_hint_load(struct mio_obj *obj)

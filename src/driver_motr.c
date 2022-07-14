@@ -67,6 +67,24 @@ error:
         return NULL;
 }
 
+/*
+ * Sync version of Motr op execution.
+ */
+static int motr_op_exec_sync(struct m0_op *cop)
+{
+	int rc;
+
+        m0_op_launch(&cop, 1);
+	rc = m0_op_wait(cop,
+			M0_BITS(M0_OS_FAILED, M0_OS_STABLE),
+			M0_TIME_NEVER);
+	rc = rc? : m0_rc(cop);
+	m0_op_fini(cop);
+	m0_op_free(cop);
+
+	return rc;
+}
+
 static int motr_create_obj_attrs_kvs()
 {
         int rc;
@@ -84,15 +102,8 @@ static int motr_create_obj_attrs_kvs()
 
 	/* Check if object's attrs key-value store exists. */
         m0_idx_op(idx, M0_IC_LOOKUP,
-			 NULL, NULL, NULL, 0, &cops[0]);
-        m0_op_launch(cops, 1);
-	rc = m0_op_wait(cops[0],
-			       M0_BITS(M0_OS_FAILED,
-				       M0_OS_STABLE),
-			       M0_TIME_NEVER);
-	rc = rc? : m0_rc(cops[0]);
-	m0_op_fini(cops[0]);
-	m0_op_free(cops[0]);
+		  NULL, NULL, NULL, 0, &cops[0]);
+	rc = motr_op_exec_sync(cops[0]);
 
 	/*
  	 * Check returned value (rc):
@@ -108,14 +119,7 @@ static int motr_create_obj_attrs_kvs()
         rc = m0_entity_create(NULL, &idx->in_entity, &cops[0]);
 	if (rc < 0)
 		goto exit;
-        m0_op_launch(cops, 1);
-	rc = m0_op_wait(cops[0],
-			       M0_BITS(M0_OS_FAILED,
-				       M0_OS_STABLE),
-			       M0_TIME_NEVER);
-	rc = rc? : m0_rc(cops[0]);
-	m0_op_fini(cops[0]);
-	m0_op_free(cops[0]);
+	rc = motr_op_exec_sync(cops[0]);
 
 exit:
 	if (rc == 0)

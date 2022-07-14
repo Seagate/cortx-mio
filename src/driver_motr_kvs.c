@@ -190,8 +190,7 @@ static int mio_motr_kvs_get(struct mio_kvs_id *kid,
 	if (rc < 0)
 		return rc;
 
-	rc = motr_kvs_keys_vals_alloc(
-			M0_IC_GET, nr_kvps, &keys, &vals);
+	rc = motr_kvs_keys_vals_alloc(M0_IC_GET, nr_kvps, &keys, &vals);
 	if (rc < 0)
 		goto error;
 
@@ -279,8 +278,7 @@ static int mio_motr_kvs_next(struct mio_kvs_id *kid,
 	if (rc < 0)
 		return rc;
 
-	rc = motr_kvs_keys_vals_alloc(
-			M0_IC_NEXT, nr_kvps, &keys, &vals);
+	rc = motr_kvs_keys_vals_alloc(M0_IC_NEXT, nr_kvps, &keys, &vals);
 	if (rc < 0)
 		goto error;
 
@@ -340,8 +338,7 @@ static int mio_motr_kvs_put(struct mio_kvs_id *kid,
 	if (rc < 0)
 		return rc;
 
-	rc = motr_kvs_keys_vals_alloc(
-			M0_IC_PUT, nr_kvps, &keys, &vals);
+	rc = motr_kvs_keys_vals_alloc(M0_IC_PUT, nr_kvps, &keys, &vals);
 	if (rc < 0) {
 		motr_kvs_idx_fini_free(idx);
 		return rc;
@@ -366,8 +363,7 @@ static int mio_motr_kvs_del(struct mio_kvs_id *kid,
 	if (rc < 0)
 		return rc;
 
-	rc = motr_kvs_keys_vals_alloc(
-			M0_IC_DEL, nr_kvps, &keys, &vals);
+	rc = motr_kvs_keys_vals_alloc(M0_IC_DEL, nr_kvps, &keys, &vals);
 	if (rc < 0) {
 		motr_kvs_idx_fini_free(idx);
 		return rc;
