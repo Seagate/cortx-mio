@@ -40,7 +40,6 @@ static void layer_ids_get(struct mio_obj_id *oid, int nr_layers,
 	uint64_t u2;
 	uint64_t n1;
 	uint64_t n2;
-	struct mio_obj_id *layer_id;
 
 	memcpy(&u1, oid->moi_bytes, sizeof u1);
 	memcpy(&u2, oid->moi_bytes + sizeof u1, sizeof u2);
@@ -48,7 +47,7 @@ static void layer_ids_get(struct mio_obj_id *oid, int nr_layers,
 	u2 = __be64_to_cpu(u2);
 
 	for (i = 0; i < nr_layers; i++) {
-		layer_id = layer_ids + i;
+		struct mio_obj_id *layer_id = layer_ids + i;
 		n1 = u1 + i + 1;
 		n2 = u2;
 		n1 = __cpu_to_be64(n1);

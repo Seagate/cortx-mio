@@ -20,7 +20,6 @@
 int mio_cmd_strtou64(const char *arg, uint64_t *out)
 {
 	char *end = NULL;
-	char *pos;
 	static const char suffix[] = "bkmgKMG";
 	int rc = 0;
 
@@ -36,8 +35,8 @@ int mio_cmd_strtou64(const char *arg, uint64_t *out)
 
 	*out = strtoull(arg, &end, 0);
 
-	if (*end != 0 && rc == 0) {
-		pos = strchr(suffix, *end);
+	if (*end != 0) {
+		char *pos = strchr(suffix, *end);
 		if (pos != NULL) {
 			if (*out <= UINT64_MAX / multiplier[pos - suffix])
 				*out *= multiplier[pos - suffix];
@@ -87,10 +86,10 @@ int mio_cmd_thread_init(pthread_t **ret_th, void* (*func)(void *), void *args)
 
 int mio_cmd_thread_join(pthread_t *th)
 {
-	int rc = 0;
 	void *result;
 
 	if (pthread_join(*th, &result) == 0) {
+		int rc = 0;
 		if (result) {
 			rc = *((int *)result);
 			free(result);

@@ -44,10 +44,9 @@ static void pool_print(int nr_pools, struct mio_pool *pools)
 	int i;
 	int j;
 	char *tier;
-	struct mio_pool *pool;
 
 	for (i = 0; i < nr_pools; i++) {
-		pool = pools + i;
+		struct mio_pool *pool = pools + i;
 		if (pool->mp_type == MIO_POOL_TYPE_SSD)
 			tier = "SSD";
 		else if (pool->mp_type == MIO_POOL_TYPE_HDD)

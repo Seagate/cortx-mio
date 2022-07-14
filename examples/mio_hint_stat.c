@@ -32,7 +32,6 @@ static int obj_hint_stat(struct mio_obj_id *oid)
 {
 	int i;
 	int rc;
-	char *hname;
 	uint64_t hvalue;
 	struct mio_obj obj;
 	struct mio_hints hints;
@@ -48,7 +47,7 @@ static int obj_hint_stat(struct mio_obj_id *oid)
 		return rc;
 
 	for (i = 0; i < MIO_HINT_OBJ_KEY_NUM; i++) {
-		hname = mio_hint_name(MIO_HINT_SCOPE_OBJ, i);
+		char *hname = mio_hint_name(MIO_HINT_SCOPE_OBJ, i);
 		rc = mio_hint_lookup(&hints, i, &hvalue);
 		if (rc < 0)
 			continue;

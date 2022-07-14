@@ -62,7 +62,6 @@ int obj_read_data_from_file(FILE *fp, uint64_t bcount, uint64_t bsize,
 			    struct mio_iovec *data)
 {
 	int i;
-	int rc;
 	char signature[5] = {'M', 'I', 'O', 'W', 'R'};
 
 	/* Generate pseudo data. */
@@ -75,8 +74,7 @@ int obj_read_data_from_file(FILE *fp, uint64_t bcount, uint64_t bsize,
 
 	/* Read from file. */
 	for (i = 0; i < bcount; i++) {
-		rc = fread(data[i].miov_base, data[i].miov_len, 1, fp);
-		if (rc != 1)
+		if (fread(data[i].miov_base, data[i].miov_len, 1, fp) != 1)
 			break;
 	}
 	return i;
@@ -85,7 +83,6 @@ int obj_read_data_from_file(FILE *fp, uint64_t bcount, uint64_t bsize,
 int obj_write_data_to_file(FILE *fp, uint64_t bcount, struct mio_iovec *data)
 {
 	int i = 0;
-	int j;
 	int rc;
 
 	if (fp != NULL) {
@@ -104,7 +101,7 @@ int obj_write_data_to_file(FILE *fp, uint64_t bcount, struct mio_iovec *data)
 	if (print_on_console) {
 		/* putchar the output */
 		for (i = 0; i < bcount; ++i) {
-			for (j = 0; j < data[i].miov_len; ++j)
+			for (int j = 0; j < data[i].miov_len; ++j)
 				putchar(data[i].miov_base[j]);
 		}
 

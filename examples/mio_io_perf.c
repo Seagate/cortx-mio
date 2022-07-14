@@ -114,11 +114,10 @@ iob_generate_data(uint64_t bcount, uint64_t bsize,
 	int i;
 	int j;
 	uint64_t rand;
-	char *ptr;
 
 	for (i = 0; i < bcount; i++) {
 		rand = mio_cmd_random(RWT_MAX_RAND_NUM);
-		ptr = data[i].miov_base;
+		char *ptr = data[i].miov_base;
 		for (j = 0; j < bsize/sizeof(rand); j++) {
 			memcpy(ptr, &rand, sizeof(rand));
 			ptr += sizeof(rand);
@@ -131,7 +130,6 @@ iob_obj_write(struct mio_obj *obj, uint64_t offset,
 	      uint64_t block_size, uint64_t block_count)
 {
 	int rc = 0;
-	uint64_t bcount;
 	uint64_t last_index;
 	uint64_t max_index;
 	struct mio_iovec *data;
@@ -139,6 +137,7 @@ iob_obj_write(struct mio_obj *obj, uint64_t offset,
 	last_index = offset;
 	max_index = offset + block_size * block_count;
 	while (block_count > 0) {
+		uint64_t bcount;
 		bcount = (block_count > MIO_CMD_MAX_BLOCK_COUNT_PER_OP)?
 			  MIO_CMD_MAX_BLOCK_COUNT_PER_OP : block_count;
 		rc = obj_alloc_iovecs(&data, bcount, block_size,
@@ -292,7 +291,7 @@ iob_threads_start(int nr_threads, enum iob_io_type iotype, struct mio_obj *obj,
 		blk_cnt_left -= args->iwi_block_count;
 	}
 
-	return 0;
+	return rc;
 
 error:
 	if (iob_threads)
