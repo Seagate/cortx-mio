@@ -131,10 +131,19 @@ AC_SUBST([ARCH])
 #------------------------------------------------------------------------------#
 
 # Define macros 
+# Add include guards to config.h
+AH_TOP([
+#pragma once
+#ifndef __MIO_CONFIG_H__
+#define __MIO_CONFIG_H__
+])
 AH_TEMPLATE([ENABLE_DEBUG],      [Enable debug info and disable optimizations.])
 AH_TEMPLATE([MOTR_LIB],          [Motr library directory])
 AH_TEMPLATE([MOTR_INCLUDE],      [Directory for Motr development header files])
 AH_TEMPLATE([CONFIG_X86_64],     [Support for X86_64 platform])
+AH_BOTTOM([
+#endif /* __MIO_CONFIG_H__ */
+])
 
 # Enable/disable options
 AC_ARG_ENABLE([debug],

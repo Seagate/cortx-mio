@@ -55,7 +55,7 @@ Workflow to collect, parse and analyse ADDB telemetry records.
 
     $ python3 mio_addb2db.py --dumps dump_xx.txt
 
-(4) MIO shows a few examples of possible analysis.
+(5) MIO shows a few examples of possible analysis.
 
     Histogram of MIO IO operation size, operation time. For example, the
     following command creates histogram of MIO write operation's execution

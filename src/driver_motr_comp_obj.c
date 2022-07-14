@@ -11,6 +11,15 @@
 #include <errno.h>
 #include <assert.h>
 
+#undef PACKAGE
+#undef PACKAGE_BUGREPORT
+#undef PACKAGE_NAME
+#undef PACKAGE_STRING
+#undef PACKAGE_TARNAME
+#undef PACKAGE_URL
+#undef PACKAGE_VERSION
+#undef VERSION
+
 #include "lib/vec.h"
 #include "motr/client.h"
 #include "motr/idx.h"
