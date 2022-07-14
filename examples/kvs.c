@@ -110,7 +110,7 @@ int kvs_fill_pairs(struct mio_kvs_id *kid, struct mio_kv_pair *pairs,
 		sprintf(tmp_str,
 			"%"PRIx64":%"PRIx64":%d",
 			id128.k_hi, id128.k_lo, start_kno + i);
-		klen = strlen(tmp_str) + 1;
+		klen = strnlen(tmp_str, KVS_MAX_KEY_LEN) + 1;
 		key_str = malloc(klen);
 		if (key_str == NULL)
 			goto error;
@@ -119,10 +119,10 @@ int kvs_fill_pairs(struct mio_kvs_id *kid, struct mio_kv_pair *pairs,
 		pairs[i].mkp_key  = key_str;
 
 		if (set_vals) {
-			memset(tmp_str, 0, KVS_MAX_KEY_LEN);
+			memset(tmp_str, 0, KVS_MAX_VAL_LEN);
 			sprintf(tmp_str, "%s %d",
 				KVS_VAL_STRING, (int)mio_cmd_random(nr_pairs));
-			vlen = strlen(tmp_str) + 1;
+			vlen = strnlen(tmp_str, KVS_MAX_VAL_LEN) + 1;
 			val_str = malloc(vlen);
 			if (val_str == NULL)
 				goto error;
@@ -375,11 +375,10 @@ int mio_cmd_kvs_insert_pairs(struct mio_kvs_id *kid,
 			     int start_kno, int nr_pairs, FILE *log)
 {
 	int rc = 0;
-	int nr_pairs_op;
 
 	while(nr_pairs > 0) {
-		nr_pairs_op = nr_pairs > KVS_MAX_NR_PAIRS_PER_OP?
-			      KVS_MAX_NR_PAIRS_PER_OP : nr_pairs;
+		int nr_pairs_op = nr_pairs > KVS_MAX_NR_PAIRS_PER_OP?
+				  KVS_MAX_NR_PAIRS_PER_OP : nr_pairs;
 		rc = kvs_query_put(kid, start_kno, nr_pairs_op, log);
 		if (rc != 0)
 			break;
@@ -394,11 +393,10 @@ int mio_cmd_kvs_retrieve_pairs(struct mio_kvs_id *kid,
 			       int start_kno, int nr_pairs, FILE *log)
 {
 	int rc = 0;
-	int nr_pairs_op;
 
 	while(nr_pairs > 0) {
-		nr_pairs_op = nr_pairs > KVS_MAX_NR_PAIRS_PER_OP?
-			      KVS_MAX_NR_PAIRS_PER_OP : nr_pairs;
+		int nr_pairs_op = nr_pairs > KVS_MAX_NR_PAIRS_PER_OP?
+				  KVS_MAX_NR_PAIRS_PER_OP : nr_pairs;
 
 		rc = kvs_query_get(kid, start_kno, nr_pairs_op, log);
 		if (rc != 0)
@@ -414,14 +412,13 @@ int mio_cmd_kvs_list_pairs(struct mio_kvs_id *kid,
 			   int start_kno, int nr_pairs, FILE *log)
 {
 	int rc = 0;
-	int nr_pairs_op;
 	int last_kno;
 	bool first_round = true;
 
 	last_kno = start_kno;
 	while(nr_pairs > 0) {
-		nr_pairs_op = nr_pairs > KVS_MAX_NR_PAIRS_PER_OP?
-			      KVS_MAX_NR_PAIRS_PER_OP : nr_pairs;
+		int nr_pairs_op = nr_pairs > KVS_MAX_NR_PAIRS_PER_OP?
+				  KVS_MAX_NR_PAIRS_PER_OP : nr_pairs;
 
 		rc = kvs_query_next(
 			kid, &last_kno, !first_round, nr_pairs_op, log);

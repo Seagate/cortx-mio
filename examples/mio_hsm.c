@@ -620,11 +620,14 @@ char** hsm_shell_split_line(char *line, int *argc)
 
 		if (position >= bufsize) {
 			bufsize += SH_TOK_BUFSIZE;
-			tokens = realloc(tokens, bufsize * sizeof(char*));
-			if (!tokens) {
+			char **new_tokens;
+			new_tokens = realloc(tokens, bufsize * sizeof(char*));
+			if (!new_tokens) {
 				fprintf(stderr, "hsm: allocation error\n");
+				free(tokens);
 				return NULL;
-			}
+			} else
+				tokens = new_tokens;
 		}
 
 		token = strtok(NULL, SH_TOK_DELIM);
@@ -633,6 +636,10 @@ char** hsm_shell_split_line(char *line, int *argc)
 	*argc = position;
 	return tokens;
 }
+
+enum {
+	HSM_MAX_CMD_LINE = 256
+};
 
 static int hsm_shell_loop()
 {
@@ -646,7 +653,7 @@ static int hsm_shell_loop()
 		line = readline("hsm> ");
 		if (!line)
 			break;
-		if (strlen(line) > 0)
+		if (strnlen(line, HSM_MAX_CMD_LINE) > 0)
 			add_history(line);
 		argv = hsm_shell_split_line(line, &argc);
 

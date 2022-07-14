@@ -89,11 +89,10 @@ rwl_generate_data(uint32_t bcount, uint32_t bsize,
 	int i;
 	int j;
 	uint32_t rand;
-	char *ptr;
 
 	for (i = 0; i < bcount; i++) {
 		rand = mio_cmd_random(RWL_MAX_RAND_NUM);
-		ptr = data[i].miov_base;
+		char *ptr = data[i].miov_base;
 		for (j = 0; j < bsize/sizeof(rand); j++) {
 			memcpy(ptr, &rand, sizeof(rand));
 			ptr += sizeof(rand);
@@ -105,7 +104,6 @@ rwl_generate_data(uint32_t bcount, uint32_t bsize,
 static void rwl_print_io(struct rwl_io *io)
 {
 	int i;
-	int rc = 0;
 	struct rwl_io *last_io = NULL;
 	bool pass;
 
@@ -127,8 +125,8 @@ static void rwl_print_io(struct rwl_io *io)
 	pthread_mutex_unlock(&cc_io_report.ior_mutex);
 
 	if (last_io != NULL) {
-		rc = memcmp(io->io_md5sum, last_io->io_md5sum,
-			    MD5_DIGEST_LENGTH);
+		int rc = memcmp(io->io_md5sum, last_io->io_md5sum,
+				MD5_DIGEST_LENGTH);
 		pass = rc == 0? true : false;
 	} else
 		pass = true;

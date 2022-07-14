@@ -81,11 +81,10 @@ rwt_generate_data(uint32_t bcount, uint32_t bsize,
 	int i;
 	int j;
 	uint32_t rand;
-	char *ptr;
 
 	for (i = 0; i < bcount; i++) {
 		rand = mio_cmd_random(RWT_MAX_RAND_NUM);
-		ptr = data[i].miov_base;
+		char *ptr = data[i].miov_base;
 		for (j = 0; j < bsize/sizeof(rand); j++) {
 			memcpy(ptr, &rand, sizeof(rand));
 			ptr += sizeof(rand);
@@ -118,7 +117,6 @@ static bool rwt_obj_verify_md5sums(struct rwt_obj_todo *todo)
 static int rwt_obj_write(struct rwt_obj_todo *todo)
 {
 	int rc = 0;
-	uint32_t bcount;
 	uint32_t block_size;
 	uint32_t block_count;
 	uint64_t last_index;
@@ -141,6 +139,7 @@ static int rwt_obj_write(struct rwt_obj_todo *todo)
 	last_index = 0;
 	MD5_Init(&md5_ctx);
 	while (block_count > 0) {
+		uint32_t bcount;
 		bcount = (block_count > MIO_CMD_MAX_BLOCK_COUNT_PER_OP)?
 			  MIO_CMD_MAX_BLOCK_COUNT_PER_OP : block_count;
 		rc = obj_alloc_iovecs(&data, bcount, block_size,
@@ -225,7 +224,6 @@ dest_close:
 
 static void* rwt_writer(void *in)
 {
-	int rc;
 	struct rwt_obj_todo *todo;
 	struct mio_thread thread;
 
@@ -245,6 +243,7 @@ static void* rwt_writer(void *in)
 		obj_to_write_list.otl_nr_in_list--;
 		pthread_mutex_unlock(&obj_to_write_list.otl_mutex);
 
+		int rc;
 		rc = rwt_obj_write(todo);
 
 		/* WRITE complete, add to the READ todo list. */
@@ -479,7 +478,7 @@ mio_rwt_start(int nr_threads, struct mio_obj_id *st_oid, int nr_objs,
 			goto error;
 	}
 
-	return 0;
+	return rc;
 
 error:
 	if (read_threads)
