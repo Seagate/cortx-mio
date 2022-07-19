@@ -38,22 +38,7 @@ static void obj_hint_usage(FILE *file, char *prog_name)
 static void
 obj_id_set(struct mio_obj_id *orig_oid, struct mio_obj_id *new_oid, int idx)
 {
-	uint64_t u1;
-	uint64_t u2;
-	uint64_t n1;
-	uint64_t n2;
-
-	memcpy(&u1, orig_oid->moi_bytes, sizeof u1);
-	memcpy(&u2, orig_oid->moi_bytes + sizeof u1, sizeof u2);
-	u1 = __be64_to_cpu(u1);
-	u2 = __be64_to_cpu(u2);
-
-	n1 = u1 + idx;
-	n2 = u2;
-	n1 = __cpu_to_be64(n1);
-	n2 = __cpu_to_be64(n2);
-	memcpy(new_oid->moi_bytes, &n1, sizeof n1);
-	memcpy(new_oid->moi_bytes + sizeof n1, &n2, sizeof n2);
+	mio_cmd_obj_id_clone(orig_oid, new_oid, idx, 0);
 }
 
 static int obj_hint_stat(struct mio_obj_id *oid, int hkey)

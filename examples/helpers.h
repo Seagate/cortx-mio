@@ -13,6 +13,10 @@
 #ifndef __HELPERS_H__
 #define __HELPERS_H__
 
+int mio_cmd_obj_id_clone(struct mio_obj_id *orig_oid,
+			 struct mio_obj_id *new_oid,
+			 int off1, int off2);
+int mio_cmd_id_sscanf(char *idstr, uint64_t *u1, uint64_t *u2);
 int mio_cmd_strtou64(const char *arg, uint64_t *out);
 int mio_cmd_wait_on_op(struct mio_op *op);
 uint32_t mio_cmd_random(uint32_t max);

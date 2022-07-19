@@ -11,6 +11,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <sys/stat.h>
 #include <asm/byteorder.h>
 #include <pthread.h>
 
@@ -110,6 +111,68 @@ int obj_write_data_to_file(FILE *fp, uint64_t bcount, struct mio_iovec *data)
 	return i;
 }
 
+int obj_write_init(struct mio_pool_id *pool, struct mio_obj_id *oid,
+		   struct mio_obj *obj, char *src,
+		   uint64_t block_size, uint64_t *block_count,
+		   uint64_t *max_index, uint64_t *max_block_count, FILE **fp)
+{
+	int rc;
+	struct stat src_stat;
+
+	/* If `src` file is not set, use pseudo data. */
+	if (src == NULL) {
+		*max_index = *block_count * block_size;
+		goto create_obj;
+	}
+
+	/* Open source file */
+	*fp = fopen(src, "r");
+	if (*fp == NULL)
+		return -errno;
+
+	rc = fstat(fileno(*fp), &src_stat);
+	if (rc < 0) {
+		fclose(*fp);
+		return rc;
+	}
+	*max_index = src_stat.st_size;
+	*max_block_count = (*max_index - 1) / block_size + 1;
+	*block_count = *block_count > *max_block_count?
+		       *max_block_count : *block_count;
+
+create_obj:
+	memset(obj, 0, sizeof *obj);
+	rc = obj_open_or_create(pool, oid, obj, NULL);
+	if (rc < 0)
+		fclose(*fp);
+	return rc;
+}
+
+int obj_read_init(struct mio_obj_id *oid, struct mio_obj *obj, char *dest,
+		  uint64_t block_size, uint64_t *block_count,
+		  uint64_t *max_index, uint64_t *max_block_count, FILE **fp)
+{
+	int rc;
+
+	if (dest != NULL) {
+		*fp = fopen(dest, "w");
+		if (*fp == NULL)
+			return -errno;
+	}
+
+	rc = obj_open(oid, obj);
+	if (rc < 0) {
+		fclose(*fp);
+		return rc;
+	}
+	*max_index = obj->mo_attrs.moa_size;
+	*max_block_count = (*max_index - 1) / block_size + 1;
+	*block_count = *block_count > *max_block_count?
+		       *max_block_count : *block_count;
+
+	return 0;
+}
+
 static int pool_id_sscanf(char *idstr, struct mio_pool_id *pool_id)
 {
 	int rc;
@@ -130,20 +193,10 @@ static int pool_id_sscanf(char *idstr, struct mio_pool_id *pool_id)
 
 static int obj_id_sscanf(char *idstr, struct mio_obj_id *oid)
 {
-	int rc;
-	int n;
-	uint64_t u1;
-	uint64_t u2;
-
-	rc = sscanf(idstr, "%"SCNx64" : %"SCNx64" %n", &u1, &u2, &n);
-	if (rc < 0)
-		return rc;
-	u1 = __cpu_to_be64(u1);
-	u2 = __cpu_to_be64(u2);
-
-	memcpy(oid->moi_bytes, &u1, sizeof u1);
-	memcpy(oid->moi_bytes + sizeof u1, &u2, sizeof u2);
-	return 0;
+	return mio_cmd_id_sscanf(idstr,
+				 (uint64_t *)oid->moi_bytes,
+				 (uint64_t *)(oid->moi_bytes +
+					      sizeof(uint64_t)));
 }
 
 void obj_id_printf(struct mio_obj_id *oid)
@@ -178,24 +231,15 @@ void obj_close(struct mio_obj *obj)
 	mio_obj_close(obj);
 }
 
-int obj_create(struct mio_pool_id *pool, struct mio_obj_id *oid,
-	       struct mio_obj *obj, struct mio_cmd_obj_hint *chint)
+static int
+obj_do_create(struct mio_pool_id *pool, struct mio_obj_id *oid,
+	      struct mio_obj *obj, struct mio_cmd_obj_hint *chint)
 {
 	int rc;
 	struct mio_op op;
 	struct mio_hints hints;
 	struct mio_hints *hints_ptr = NULL;
 
-	rc = obj_open(oid, obj);
-	if (rc == 0) {
-		fprintf(stderr, "Object exists!\n");
-		return -EEXIST;
-	} else if (rc == -ENOENT)
-		goto create;
-	else
-		return rc;
-
-create:
 	if (chint != NULL) {
 		memset(&hints, 0, sizeof hints);
         	mio_hints_init(&hints);
@@ -216,6 +260,22 @@ create:
 
 	rc = mio_cmd_wait_on_op(&op);
 	return rc;
+
+}
+
+int obj_create(struct mio_pool_id *pool, struct mio_obj_id *oid,
+	       struct mio_obj *obj, struct mio_cmd_obj_hint *chint)
+{
+	int rc;
+
+	rc = obj_open(oid, obj);
+	if (rc == 0) {
+		fprintf(stderr, "Object exists!\n");
+		return -EEXIST;
+	} else if (rc == -ENOENT)
+		return obj_do_create(pool, oid, obj, chint);
+	else
+		return rc;
 }
 
 /*
@@ -226,39 +286,12 @@ int obj_open_or_create(struct mio_pool_id *pool, struct mio_obj_id *oid,
 		       struct mio_obj *obj, struct mio_cmd_obj_hint *chint)
 {
 	int rc;
-	struct mio_op op;
-	struct mio_hints hints;
-	struct mio_hints *hints_ptr = NULL;
 
 	rc = obj_open(oid, obj);
-	if (rc == 0)
-		return 0;
-	else if (rc == -ENOENT)
-		goto create;
+	if (rc == -ENOENT)
+		return obj_do_create(pool, oid, obj, chint);
 	else
 		return rc;
-
-create:
-	if (chint != NULL) {
-		memset(&hints, 0, sizeof hints);
-     		mio_hints_init(&hints);
-        	rc = mio_hint_add(&hints, chint->co_hkey, chint->co_hvalue);
-        	if (rc < 0) {
-                	fprintf(stderr, "Failed to set hint %s\n",
-                        	mio_hint_name(MIO_HINT_SCOPE_OBJ,
-					      chint->co_hkey));
-                	return rc;
-        	}
-		hints_ptr = &hints;
-	}
-
-	memset(&op, 0, sizeof op);
-	rc = mio_obj_create(oid, pool, hints_ptr, obj, &op);
-	if (rc != 0)
-		return rc;
-
-	rc = mio_cmd_wait_on_op(&op);
-	return rc;
 }
 
 int obj_rm(struct mio_obj_id *oid)

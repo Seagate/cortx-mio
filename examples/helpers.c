@@ -13,9 +13,58 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <errno.h>
+#include <asm/byteorder.h>
 #include <pthread.h>
 
 #include "src/mio.h"
+
+int mio_cmd_obj_id_clone(struct mio_obj_id *orig_oid,
+			 struct mio_obj_id *new_oid,
+			 int off1, int off2)
+{
+	uint64_t u1;
+	uint64_t u2;
+	uint64_t n1;
+	uint64_t n2;
+
+	if (orig_oid == NULL || new_oid == NULL)
+		return -EINVAL;
+
+	memcpy(&u1, orig_oid->moi_bytes, sizeof u1);
+	memcpy(&u2, orig_oid->moi_bytes + sizeof u1, sizeof u2);
+	u1 = __be64_to_cpu(u1);
+	u2 = __be64_to_cpu(u2);
+
+	n1 = u1 + off1;
+	n2 = u2 + off2;
+	n1 = __cpu_to_be64(n1);
+	n2 = __cpu_to_be64(n2);
+	memcpy(new_oid->moi_bytes, &n1, sizeof n1);
+	memcpy(new_oid->moi_bytes + sizeof n1, &n2, sizeof n2);
+	return 0;
+}
+
+int mio_cmd_id_sscanf(char *idstr, uint64_t *out_u1, uint64_t *out_u2)
+{
+        int rc;
+        int n;
+	uint64_t u1;
+	uint64_t u2;
+
+	if (out_u1 == NULL || out_u2 == NULL)
+		return -EINVAL;
+
+        rc = sscanf(idstr, "%"SCNx64" : %"SCNx64" %n", &u1, &u2, &n);
+        if (rc < 0)
+                return rc;
+        u1 = __cpu_to_be64(u1);
+        u2 = __cpu_to_be64(u2);
+
+        memcpy(out_u1, &u1, sizeof u1);
+        memcpy(out_u2, &u2, sizeof u2);
+        return 0;
+}
+
 
 int mio_cmd_strtou64(const char *arg, uint64_t *out)
 {

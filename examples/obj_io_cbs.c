@@ -44,6 +44,31 @@ void obj_wait_on_all_ops()
 
 }
 
+static int
+obj_rw_op_alloc(struct mio_op **op, struct obj_io_cb_args **args,
+		FILE *fp, uint64_t bcount, struct mio_iovec *data)
+{
+	if (op == NULL || args == NULL)
+		return -EINVAL;
+	*args = malloc(sizeof **args);
+	if (*args == NULL)
+		return -ENOMEM;
+	/*
+ 	 * Allocate memory for op as the op's memory must keep
+ 	 * alive after exiting this function.
+ 	 */
+	*op = mio_op_alloc_init();
+	if (*op == NULL) {
+		free(*args);
+		return -ENOMEM;
+	}
+
+	(*args)->ica_bcount = bcount;
+	(*args)->ica_iovecs = data;
+	(*args)->ica_fp = fp;
+	return 0;
+}
+
 void obj_write_cb(struct mio_op *op)
 {
 	struct obj_io_cb_args *args;
@@ -65,27 +90,15 @@ static int obj_write_async(struct mio_obj *obj, int op_idx,
 	struct mio_op *op;
 	struct obj_io_cb_args *args;
 
-	args = malloc(sizeof *args);
-	if (args == NULL)
-		return -ENOMEM;
-
-	/*
- 	 * Allocate memory for op as the op's memory must keep
- 	 * alive after exiting this function.
- 	 */
-	op = mio_op_alloc_init();
-	if (op == NULL) {
-		free(args);
-		return -ENOMEM;
-	}
+	rc = obj_rw_op_alloc(&op, &args, NULL, bcount, data);
+	if (rc < 0)
+		return rc;
 
 	/*
 	 * Callbacks must be set before calling mio_obj_writev() as
 	 * the op will be launched in this function. Same to other
 	 * MIO APIs if one wants to set callbacks.
 	 */
-	args->ica_bcount = bcount;
-	args->ica_iovecs = data;
 	mio_op_callbacks_set(op, obj_write_cb, obj_write_cb, args);
 	rc = mio_obj_writev(obj, data, bcount, op);
 	if (rc < 0) {
@@ -114,7 +127,6 @@ void obj_read_cb(struct mio_op *op)
 	pthread_mutex_unlock(&obj_io_mutex);
 }
 
-
 static int
 obj_read_async(struct mio_obj *obj, FILE *write_to_fp,
 	       int op_idx, uint64_t bcount, struct mio_iovec *data)
@@ -123,19 +135,9 @@ obj_read_async(struct mio_obj *obj, FILE *write_to_fp,
 	struct mio_op *op;
 	struct obj_io_cb_args *args;
 
-	args = malloc(sizeof *args);
-	if (args == NULL)
-		return -ENOMEM;
-
-	op = mio_op_alloc_init();
-	if (op == NULL) {
-		free(args);
-		return -ENOMEM;
-	}
-
-	args->ica_bcount = bcount;
-	args->ica_iovecs = data;
-	args->ica_fp = write_to_fp;
+	rc = obj_rw_op_alloc(&op, &args, write_to_fp, bcount, data);
+	if (rc < 0)
+		return rc;
 	mio_op_callbacks_set(op, obj_read_cb, obj_read_cb, args);
 	rc = mio_obj_readv(obj, data, bcount, op);
 	if (rc < 0) {
@@ -190,31 +192,12 @@ int mio_cmd_obj_write_async(char *src, struct mio_pool_id *pool,
 	struct mio_iovec *data;
 	struct mio_obj obj;
 	FILE *fp = NULL;
-	struct stat src_stat;
 
-	/* If `src` file is not set, use pseudo data. */
-	if (src == NULL) {
-		max_index = block_count * block_size;
-		goto create_obj;
-	}
-
-	/* Open source file */
-	fp = fopen(src, "r");
-	if (fp == NULL)
-		return -errno;
-	rc = fstat(fileno(fp), &src_stat);
+	rc = obj_write_init(pool, oid, &obj, src,
+			    block_size, &block_count,
+			    &max_index, &max_block_count, &fp);
 	if (rc < 0)
-		goto src_close;
-	max_index = src_stat.st_size;
-	max_block_count = (max_index - 1) / block_size + 1;
-	block_count = block_count > max_block_count?
-		      max_block_count : block_count;
-
-create_obj:
-	memset(&obj, 0, sizeof obj);
-	rc = obj_open_or_create(pool, oid, &obj, NULL);
-	if (rc < 0)
-		goto src_close;
+		return rc;
 
 	rc = obj_io_async_init(block_count, async_step);
 	if (rc < 0)
@@ -259,9 +242,7 @@ create_obj:
 
 obj_close:
 	mio_obj_close(&obj);
-src_close:
-	if (fp)
-		fclose(fp);
+	fclose(fp);
 	return rc;
 }
 
@@ -278,13 +259,6 @@ int mio_cmd_obj_read_async(struct mio_obj_id *oid, char *dest,
 	struct mio_obj obj;
 	FILE *fp = NULL;
 
-	if (dest != NULL) {
-		fp = fopen(dest, "w");
-		if (fp == NULL)
-			return -errno;
-
-	}
-
 	/*
 	 * As 'obj' keeps alive in the scope of this function till
 	 * all operation are done, so it is ok not to allocate memory
@@ -292,13 +266,11 @@ int mio_cmd_obj_read_async(struct mio_obj_id *oid, char *dest,
 	 * all the ops which are doing IO on it are done.
 	 */
 	memset(&obj, 0, sizeof obj);
-	rc = obj_open(oid, &obj);
+	rc = obj_read_init(oid, &obj, dest,
+			   block_size, &block_count,
+			   &max_index, &max_block_count, &fp);
 	if (rc < 0)
-		goto dest_close;
-	max_index = obj.mo_attrs.moa_size;
-	max_block_count = (max_index - 1) / block_size + 1;
-	block_count = block_count > max_block_count?
-		      max_block_count : block_count;
+		return rc;
 
 	rc = obj_io_async_init(block_count, async_step);
 	if (rc < 0)
@@ -337,9 +309,7 @@ int mio_cmd_obj_read_async(struct mio_obj_id *oid, char *dest,
 
 obj_close:
 	mio_obj_close(&obj);
-dest_close:
-	if (fp)
-		fclose(fp);
+	fclose(fp);
 	return rc;
 }
 
