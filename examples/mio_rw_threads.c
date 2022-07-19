@@ -19,6 +19,7 @@
 
 #include "obj.h"
 #include "helpers.h"
+#include "io_thread.h"
 
 struct rwt_obj_todo {
 	struct mio_obj_id ot_oid;
@@ -45,10 +46,6 @@ struct rwt_obj_todo_list {
 static struct rwt_obj_todo_list obj_to_write_list;
 static struct rwt_obj_todo_list obj_to_read_list;
 
-enum {
-	RWT_MAX_RAND_NUM = 1024
-};
-
 static pthread_t **read_threads = NULL;
 static pthread_t **write_threads = NULL;
 static int *read_tids = NULL;
@@ -72,25 +69,6 @@ static void rw_threads_usage(FILE *file, char *prog_name)
 "  -y, --mio_conf                 MIO YAML configuration file\n"
 "  -h, --help                     shows this help text and exit\n"
 , prog_name);
-}
-
-static void
-rwt_generate_data(uint32_t bcount, uint32_t bsize,
-		  struct mio_iovec *data, MD5_CTX *md5_ctx)
-{
-	int i;
-	int j;
-	uint32_t rand;
-
-	for (i = 0; i < bcount; i++) {
-		rand = mio_cmd_random(RWT_MAX_RAND_NUM);
-		char *ptr = data[i].miov_base;
-		for (j = 0; j < bsize/sizeof(rand); j++) {
-			memcpy(ptr, &rand, sizeof(rand));
-			ptr += sizeof(rand);
-		};
-		MD5_Update(md5_ctx, data[i].miov_base, bsize);
-	}
 }
 
 static bool rwt_obj_verify_md5sums(struct rwt_obj_todo *todo)
@@ -117,18 +95,10 @@ static bool rwt_obj_verify_md5sums(struct rwt_obj_todo *todo)
 static int rwt_obj_write(struct rwt_obj_todo *todo)
 {
 	int rc = 0;
-	uint32_t block_size;
-	uint32_t block_count;
-	uint64_t last_index;
-	uint64_t max_index;
-	struct mio_iovec *data;
 	struct mio_obj obj;
 	struct mio_obj_id *oid = &todo->ot_oid;
-	MD5_CTX md5_ctx;
-
-	block_size = todo->ot_block_size;
-	block_count = todo->ot_block_count;
-	max_index = block_size * block_count;
+	uint32_t block_size = todo->ot_block_size;
+	uint32_t block_count = todo->ot_block_count;
 
 	/* Create the target object if it doesn't exist. */
 	memset(&obj, 0, sizeof obj);
@@ -136,86 +106,27 @@ static int rwt_obj_write(struct rwt_obj_todo *todo)
 	if (rc < 0 && rc != -EEXIST)
 		return rc;
 
-	last_index = 0;
-	MD5_Init(&md5_ctx);
-	while (block_count > 0) {
-		uint32_t bcount;
-		bcount = (block_count > MIO_CMD_MAX_BLOCK_COUNT_PER_OP)?
-			  MIO_CMD_MAX_BLOCK_COUNT_PER_OP : block_count;
-		rc = obj_alloc_iovecs(&data, bcount, block_size,
-				      last_index, max_index);
-		if (rc != 0)
-			break;
-		rwt_generate_data(bcount, block_size, data, &md5_ctx);
-
-		rc = obj_write(&obj, bcount, data);
-		if (rc != 0) {
-			fprintf(stderr, "Writing to object failed!\n");
-			obj_cleanup_iovecs(data);
-			break;
-		}
-
-		obj_cleanup_iovecs(data);
-		block_count -= bcount;
-		last_index += bcount * block_size;
-	}
-	MD5_Final(todo->ot_md5sum_write, &md5_ctx);
-
+	rc = io_thread_obj_write(&obj, block_size, block_count,
+				 todo->ot_md5sum_write);
 	mio_obj_close(&obj);
 	return rc;
 }
 
 static int rwt_obj_read(struct rwt_obj_todo *todo)
 {
-	int i;
 	int rc = 0;
-	uint32_t bcount;
-	uint32_t block_size;
-	uint32_t block_count;
-	uint64_t last_index;
-	uint64_t max_index;
-	struct mio_iovec *data;
 	struct mio_obj obj;
 	struct mio_obj_id *oid = &todo->ot_oid;
-	MD5_CTX md5_ctx;
-
-	block_size = todo->ot_block_size;
-	block_count = todo->ot_block_count;
-	max_index = block_size * block_count;
+	uint32_t block_size = todo->ot_block_size;
+	uint32_t block_count = todo->ot_block_count;
 
 	memset(&obj, 0, sizeof obj);
 	rc = obj_open(oid, &obj);
 	if (rc < 0)
 		goto dest_close;
 
-	last_index = 0;
-	MD5_Init(&md5_ctx);
-	while (block_count > 0) {
-		bcount = (block_count > MIO_CMD_MAX_BLOCK_COUNT_PER_OP)?
-			  MIO_CMD_MAX_BLOCK_COUNT_PER_OP : block_count;
-		rc = obj_alloc_iovecs(&data, bcount, block_size,
-				      last_index, max_index);
-		if (rc != 0)
-			break;
-
-		/* Read data from obj. */
-		rc = obj_read(&obj, bcount, data);
-		if (rc != 0) {
-			fprintf(stderr, "Failed in reading from file!\n");
-			obj_cleanup_iovecs(data);
-			break;
-		}
-
-		/* Calculate md5sum from data. */
-		for (i = 0; i < bcount; i++)
-			MD5_Update(&md5_ctx, data[i].miov_base, block_size);
-
-		obj_cleanup_iovecs(data);
-		block_count -= bcount;
-		last_index += bcount * block_size;
-	}
-	MD5_Final(todo->ot_md5sum_read, &md5_ctx);
-
+	rc = io_thread_obj_read(&obj, block_size, block_count,
+				todo->ot_md5sum_read);
 	mio_obj_close(&obj);
 
 dest_close:
@@ -494,35 +405,15 @@ error:
 
 static void mio_rwt_stop(int nr_threads)
 {
-	int i;
-
-	for (i = 0; i < nr_threads; i++) {
-		if (write_threads[i] == NULL)
-			break;
-
-		mio_cmd_thread_join(write_threads[i]);
-		mio_cmd_thread_fini(write_threads[i]);
-		write_threads[i] = NULL;
-	}
-
-	for (i = 0; i < nr_threads; i++) {
-		if (read_threads[i] == NULL)
-			break;
-
-		mio_cmd_thread_join(read_threads[i]);
-		mio_cmd_thread_fini(read_threads[i]);
-		read_threads[i] = NULL;
-
-	}
+	io_threads_stop(write_threads, nr_threads);
+	io_threads_stop(read_threads, nr_threads);
 	free(read_threads);
 	free(write_threads);
 	free(read_tids);
 	free(write_tids);
 
 	rwt_report();
-
 	rwt_todo_lists_fini();
-
 	return;
 }
 

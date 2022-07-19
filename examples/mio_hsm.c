@@ -85,45 +85,13 @@ static void hsm_action_usage()
 static void
 hsm_make_oid(struct mio_obj_id *oid, int idx)
 {
-        uint64_t u1;
-        uint64_t u2;
-        uint64_t n1;
-        uint64_t n2;
-	struct mio_obj_id *st_oid = &hsm_params.cop_oid;
-
-        memcpy(&u1, st_oid->moi_bytes, sizeof u1);
-        memcpy(&u2, st_oid->moi_bytes + sizeof u1, sizeof u2);
-	u1 = __be64_to_cpu(u1);
-	u2 = __be64_to_cpu(u2);
-
-        n1 = u1 + idx;
-        n2 = u2;
-	n1 = __cpu_to_be64(n1);
-	n2 = __cpu_to_be64(n2);
-        memcpy(oid->moi_bytes, &n1, sizeof n1);
-        memcpy(oid->moi_bytes + sizeof n1, &n2, sizeof n2);
+	mio_cmd_obj_id_clone(&hsm_params.cop_oid, oid, idx, 0);
 }
 
 static void
 hsm_make_tmp_oid(struct mio_obj_id *oid)
 {
-        uint64_t u1;
-        uint64_t u2;
-        uint64_t n1;
-        uint64_t n2;
-	struct mio_obj_id *st_oid = &hsm_params.cop_oid;
-
-        memcpy(&u1, st_oid->moi_bytes, sizeof u1);
-        memcpy(&u2, st_oid->moi_bytes + sizeof u1, sizeof u2);
-	u1 = __be64_to_cpu(u1);
-	u2 = __be64_to_cpu(u2);
-
-        n1 = u1;
-        n2 = 0x1000;
-	n1 = __cpu_to_be64(n1);
-	n2 = __cpu_to_be64(n2);
-        memcpy(oid->moi_bytes, &n1, sizeof n1);
-        memcpy(oid->moi_bytes + sizeof n1, &n2, sizeof n2);
+	mio_cmd_obj_id_clone(&hsm_params.cop_oid, oid, 0, 0x1000);
 }
 
 static int hsm_create_objs()

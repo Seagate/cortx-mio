@@ -58,6 +58,28 @@ static void layer_ids_get(struct mio_obj_id *oid, int nr_layers,
 }
 
 static int
+comp_obj_alloc_layer_ids_n_exts(struct mio_obj_id *oid,
+				struct mio_obj_id **layer_ids, int nr_layers,
+				struct mio_obj_ext **exts, int nr_exts)
+{
+	if (layer_ids == NULL || exts == NULL)
+		return -EINVAL;
+
+	*layer_ids = malloc(nr_layers * sizeof(**layer_ids));
+	*exts = malloc(nr_exts * sizeof(**exts));
+	if (*layer_ids == NULL || *exts == NULL) {
+		if (*layer_ids == NULL)
+			free(*layer_ids);
+		if (*exts == NULL)
+			free(*exts);
+		return -ENOMEM;
+	}
+
+	layer_ids_get(oid, nr_layers, *layer_ids);
+	return 0;
+}
+
+static int
 comp_obj_add_extents(struct mio_obj *obj, int nr_layers, int nr_exts)
 {
 	int i;
@@ -67,13 +89,10 @@ comp_obj_add_extents(struct mio_obj *obj, int nr_layers, int nr_exts)
 	struct mio_obj_ext *exts;
 	struct mio_op op;
 
-	layer_ids = malloc(nr_layers * sizeof(*layer_ids));
-	exts = malloc(nr_exts * sizeof(*exts));
-	if (layer_ids == NULL || exts == NULL) {
-		rc = -ENOMEM;
-		goto exit;
-	}
-	layer_ids_get(&obj->mo_id, nr_layers, layer_ids);
+	rc = comp_obj_alloc_layer_ids_n_exts(
+		&obj->mo_id, &layer_ids, nr_layers, &exts, nr_exts);
+	if (rc < 0)
+		return rc;
 
 	for (i = 0; i < nr_layers; i++) {
 		for (j = 0; j < nr_exts; j++) {
@@ -95,7 +114,6 @@ comp_obj_add_extents(struct mio_obj *obj, int nr_layers, int nr_exts)
 	 * that have been added if there is an error.
  	 */
 
-exit:
 	free(layer_ids);
 	free(exts);
 	return rc;
@@ -111,13 +129,10 @@ comp_obj_del_extents(struct mio_obj *obj, int nr_layers, int nr_exts)
 	struct mio_obj_ext *exts;
 	struct mio_op op;
 
-	layer_ids = malloc(nr_layers * sizeof(*layer_ids));
-	exts = malloc(nr_exts * sizeof(*exts));
-	if (layer_ids == NULL || exts == NULL) {
-		rc = -ENOMEM;
-		goto exit;
-	}
-	layer_ids_get(&obj->mo_id, nr_layers, layer_ids);
+	rc = comp_obj_alloc_layer_ids_n_exts(
+		&obj->mo_id, &layer_ids, nr_layers, &exts, nr_exts);
+	if (rc < 0)
+		return rc;
 
 	for (i = 0; i < nr_layers; i++) {
 		for (j = 0; j < nr_exts; j++) {
@@ -134,7 +149,6 @@ comp_obj_del_extents(struct mio_obj *obj, int nr_layers, int nr_exts)
 			break;
 	}
 
-exit:
 	free(layer_ids);
 	free(exts);
 	return rc;
@@ -152,13 +166,10 @@ comp_obj_list_extents(struct mio_obj *obj, int nr_layers, int nr_exts)
 	struct mio_obj_ext *exts;
 	struct mio_op op;
 
-	layer_ids = malloc(nr_layers * sizeof(*layer_ids));
-	exts = malloc(nr_exts * sizeof(*exts));
-	if (layer_ids == NULL || exts == NULL) {
-		rc = -ENOMEM;
-		goto exit;
-	}
-	layer_ids_get(&obj->mo_id, nr_layers, layer_ids);
+	rc = comp_obj_alloc_layer_ids_n_exts(
+		&obj->mo_id, &layer_ids, nr_layers, &exts, nr_exts);
+	if (rc < 0)
+		return rc;
 
 	for (i = 0; i < nr_layers; i++) {
 		offset = 0; //i * nr_exts * 4096 * 4096;
@@ -178,28 +189,44 @@ comp_obj_list_extents(struct mio_obj *obj, int nr_layers, int nr_exts)
 		}
 	}
 
-exit:
 	free(layer_ids);
 	free(exts);
 	return rc;
 }
 
+static int
+comp_obj_alloc_layers(struct mio_obj_id *oid,
+		      struct mio_comp_obj_layer **layers,
+		      struct mio_obj_id **layer_ids, int nr_layers)
+{
+	if (layers == NULL || layer_ids == NULL)
+		return -EINVAL;
+
+	*layers = malloc(nr_layers * sizeof(**layers));
+	*layer_ids = malloc(nr_layers * sizeof(**layer_ids));
+	if (*layers == NULL || *layer_ids == NULL) {
+		if (*layer_ids == NULL)
+			free(*layer_ids);
+		if (*layers == NULL)
+			free(*layers);
+		return -ENOMEM;
+	}
+
+	layer_ids_get(oid, nr_layers, *layer_ids);
+	return 0;
+}
 
 static int comp_obj_add_layers(struct mio_obj *obj, int nr_layers)
 {
 	int i;
 	int rc = 0;
+	struct mio_op op;
 	struct mio_comp_obj_layer *layers;
 	struct mio_obj_id *layer_ids;
-	struct mio_op op;
 
-	layers = malloc(nr_layers * sizeof(*layers));
-	layer_ids = malloc(nr_layers * sizeof(*layer_ids));
-	if (layers == NULL || layer_ids == NULL) {
-		rc = -ENOMEM;
-		goto exit;
-	}
-	layer_ids_get(&obj->mo_id, nr_layers, layer_ids);
+	rc = comp_obj_alloc_layers(&obj->mo_id, &layers, &layer_ids, nr_layers);
+	if (rc < 0)
+		return rc;
 
 	/* Create objects for each layer. */
 	for (i = 0; i < nr_layers; i++) {
@@ -221,10 +248,8 @@ static int comp_obj_add_layers(struct mio_obj *obj, int nr_layers)
 	mio_op_fini(&op);
 
 exit:
-	if (layers != NULL)
-		free(layers);
-	if (layer_ids != NULL)
-		free(layer_ids);
+	free(layers);
+	free(layer_ids);
 	return rc;
 }
 
@@ -236,11 +261,9 @@ static int comp_obj_del_layers(struct mio_obj *obj, int nr_layers)
 	struct mio_obj_id *layer_ids;
 	struct mio_op op;
 
-	layers = malloc(nr_layers * sizeof(*layers));
-	layer_ids = malloc(nr_layers * sizeof(*layer_ids));
-	if (layers == NULL || layer_ids == NULL)
-		return -ENOMEM;
-	layer_ids_get(&obj->mo_id, nr_layers, layer_ids);
+	rc = comp_obj_alloc_layers(&obj->mo_id, &layers, &layer_ids, nr_layers);
+	if (rc < 0)
+		return rc;
 
 	for (i = 0; i < nr_layers; i++)
 		/* No need to set priority for deleting layers. */
@@ -259,6 +282,7 @@ static int comp_obj_del_layers(struct mio_obj *obj, int nr_layers)
 			break;
 	}
 
+	free(layers);
 	free(layer_ids);
 	return rc;
 }

@@ -6,7 +6,8 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 nobase_mio_include_HEADERS += examples/obj.h \
-			      examples/kvs.h examples/helpers.h
+			      examples/kvs.h examples/helpers.h \
+			      examples/io_thread.h
 
 examples_mio_cat_SOURCES = examples/mio_cat.c examples/obj.c \
 	  examples/obj_io_poll.c examples/obj_io_cbs.c \
@@ -18,11 +19,11 @@ examples_mio_copy_SOURCES = examples/mio_copy.c examples/obj.c \
 
 examples_mio_rw_threads_SOURCES = examples/mio_rw_threads.c \
 	  examples/obj.c examples/obj_io_poll.c \
-	  examples/helpers.c
+	  examples/helpers.c examples/io_thread.c
 
 examples_mio_rw_lock_SOURCES = examples/mio_rw_lock.c \
 	  examples/obj.c examples/obj_io_poll.c \
-	  examples/helpers.c
+	  examples/helpers.c examples/io_thread.c
 
 examples_mio_hsm_SOURCES = examples/mio_hsm.c examples/obj.c \
 	  examples/obj_io_poll.c examples/helpers.c

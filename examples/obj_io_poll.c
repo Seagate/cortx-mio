@@ -30,6 +30,14 @@
 /*
  * Add telemetry data points at places where an IO starts and ends.
  */
+static void obj_id_to_uint64s(struct mio_obj *obj, uint64_t *u1, uint64_t *u2)
+{
+	memcpy(u1, obj->mo_id.moi_bytes, sizeof *u1);
+	memcpy(u2, obj->mo_id.moi_bytes + sizeof *u1, sizeof *u2);
+	*u1 = __be64_to_cpu(*u1);
+	*u2 = __be64_to_cpu(*u2);
+}
+
 void
 telemetry_obj_io_start(struct mio_obj *obj, uint64_t bcount,
 		       struct mio_iovec *data, bool is_write)
@@ -40,11 +48,7 @@ telemetry_obj_io_start(struct mio_obj *obj, uint64_t bcount,
 	uint64_t u1;
 	uint64_t u2;
 
-	memcpy(&u1, obj->mo_id.moi_bytes, sizeof u1);
-	memcpy(&u2, obj->mo_id.moi_bytes + sizeof u1, sizeof u2);
-	u1 = __be64_to_cpu(u1);
-	u2 = __be64_to_cpu(u2);
-
+	obj_id_to_uint64s(obj, &u1, &u2);
 	sprintf(topic, "mio-obj-%s-start", is_write? "write" : "read");
 	mio_telemetry_array_advertise(
 		topic, MIO_TM_TYPE_ARRAY_UINT64, 2, u1, u2);
@@ -62,11 +66,7 @@ void telemetry_obj_io_end(struct mio_obj *obj, bool is_write)
 	uint64_t u1;
 	uint64_t u2;
 
-	memcpy(&u1, obj->mo_id.moi_bytes, sizeof u1);
-	memcpy(&u2, obj->mo_id.moi_bytes + sizeof u1, sizeof u2);
-	u1 = __be64_to_cpu(u1);
-	u2 = __be64_to_cpu(u2);
-
+	obj_id_to_uint64s(obj, &u1, &u2);
 	sprintf(topic, "mio-obj-%s-end", is_write? "write" : "read");
 	mio_telemetry_array_advertise(
 		topic, MIO_TM_TYPE_ARRAY_UINT64, 2, u1, u2);
@@ -129,33 +129,12 @@ int mio_cmd_obj_write(char *src, struct mio_pool_id *pool,
 	struct mio_iovec *data;
 	struct mio_obj obj;
 	FILE *fp = NULL;
-	struct stat src_stat;
 
-	/* If `src` file is not set, use pseudo data. */
-	if (src == NULL) {
-		max_index = block_count * block_size;
-		goto create_obj;
-	}
-
-	/* Open source file */
-	fp = fopen(src, "r");
-	if (fp == NULL)
-		return -errno;
-
-	rc = fstat(fileno(fp), &src_stat);
+	rc = obj_write_init(pool, oid, &obj, src,
+			    block_size, &block_count,
+			    &max_index, &max_block_count, &fp);
 	if (rc < 0)
-		goto src_close;
-	max_index = src_stat.st_size;
-	max_block_count = (max_index - 1) / block_size + 1;
-	block_count = block_count > max_block_count?
-		      max_block_count : block_count;
-
-create_obj:
-	/* Create the target object if it doesn't exist. */
-	memset(&obj, 0, sizeof obj);
-	rc = obj_open_or_create(pool, oid, &obj, NULL);
-	if (rc < 0)
-		goto src_close;
+		return rc;
 
 	last_index = 0;
 	while (block_count > 0) {
@@ -187,10 +166,7 @@ create_obj:
 	}
 
 	mio_obj_close(&obj);
-
-src_close:
-	if (fp)
-		fclose(fp);
+	fclose(fp);
 	return rc;
 }
 
@@ -209,21 +185,11 @@ int mio_cmd_obj_read(struct mio_obj_id *oid, char *dest,
 	struct mio_obj obj;
 	FILE *fp = NULL;
 
-	if (dest != NULL) {
-		fp = fopen(dest, "w");
-		if (fp == NULL)
-			return -errno;
-
-	}
-
-	memset(&obj, 0, sizeof obj);
-	rc = obj_open(oid, &obj);
+	rc = obj_read_init(oid, &obj, dest,
+			   block_size, &block_count,
+			   &max_index, &max_block_count, &fp);
 	if (rc < 0)
-		goto dest_close;
-	max_index = obj.mo_attrs.moa_size;
-	max_block_count = (max_index - 1) / block_size + 1;
-	block_count = block_count > max_block_count?
-		      max_block_count : block_count;
+		return rc;
 
 	last_index = 0;
 	while (block_count > 0) {
@@ -258,10 +224,7 @@ int mio_cmd_obj_read(struct mio_obj_id *oid, char *dest,
 	}
 
 	mio_obj_close(&obj);
-
-dest_close:
-	if(fp != NULL)
-		fclose(fp);
+	fclose(fp);
 	return rc;
 }
 

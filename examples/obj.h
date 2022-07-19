@@ -100,6 +100,14 @@ int obj_rm(struct mio_obj_id *oid);
 int obj_write(struct mio_obj *obj, uint64_t bcount, struct mio_iovec *data);
 int obj_read(struct mio_obj *obj, uint64_t bcount, struct mio_iovec *data);
 
+int obj_write_init(struct mio_pool_id *pool, struct mio_obj_id *oid,
+		   struct mio_obj *obj, char *src,
+		   uint64_t block_size, uint64_t *block_count,
+		   uint64_t *max_index, uint64_t *max_block_count, FILE **fp);
+int obj_read_init(struct mio_obj_id *oid, struct mio_obj *obj, char *dest,
+		  uint64_t block_size, uint64_t *block_count,
+		  uint64_t *max_index, uint64_t *max_block_count, FILE **fp);
+
 void obj_id_printf(struct mio_obj_id *oid);
 
 #endif /* __OBJ_H__ */
