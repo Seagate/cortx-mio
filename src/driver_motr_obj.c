@@ -1468,15 +1468,20 @@ motr_obj_attrs_mem2wire(struct mio_obj *obj,
 {
 	int i;
 	int nonhint_size;
+	int hints_nr_set;
 	uint64_t size;
 	void *buf;
 	char *ptr;
 	struct mio_hint_map *map = &obj->mo_attrs.moa_phints.mh_map;
 
+	hints_nr_set = map->mhm_nr_set;
+	if (hints_nr_set > map->mhm_nr_entries)
+		hints_nr_set = map->mhm_nr_entries;
+
 	nonhint_size  = motr_obj_attr_nonhint_size(obj);
 	size = nonhint_size;
 	size += sizeof(int);
-	size += map->mhm_nr_set * (sizeof(int) + sizeof(uint64_t));
+	size += hints_nr_set * (sizeof(int) + sizeof(uint64_t));
 
 	buf = mio_mem_alloc(size);
 	if (buf == NULL)
@@ -1486,15 +1491,15 @@ motr_obj_attrs_mem2wire(struct mio_obj *obj,
 	mio_mem_copy(ptr, &obj->mo_attrs, nonhint_size);
 	ptr += nonhint_size;
 
-	mio_mem_copy(ptr, &map->mhm_nr_set, sizeof(int));
+	mio_mem_copy(ptr, &hints_nr_set, sizeof(int));
 	ptr += sizeof(int);
 
-	for (i = 0; i < map->mhm_nr_set; i++) {
+	for (i = 0; i < hints_nr_set; i++) {
 		mio_mem_copy(ptr, map->mhm_keys + i, sizeof(int));
 		ptr += sizeof(int);
 	}
 
-	for (i = 0; i < map->mhm_nr_set; i++) {
+	for (i = 0; i < hints_nr_set; i++) {
 		mio_mem_copy(ptr, map->mhm_values + i, sizeof(uint64_t));
 		ptr += sizeof(uint64_t);
 	}
