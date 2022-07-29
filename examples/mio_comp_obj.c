@@ -360,6 +360,7 @@ int main(int argc, char **argv)
 	fprintf(stderr, "MIO composite example ...\n");
 
 	fprintf(stderr, "1. Create a composite object ...");
+	memset(&obj, 0, sizeof obj);
 	rc = comp_obj_create(&comp_obj_params.cop_oid, &obj);
 	if (rc < 0) {
 		fprintf(stderr, "failed!\n");
